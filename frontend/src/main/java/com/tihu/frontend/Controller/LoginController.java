@@ -1,7 +1,11 @@
 package com.tihu.frontend.Controller;
 
+import com.tihu.frontend.MainApplication;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.stage.Stage;
 
 public class LoginController {
 
@@ -17,7 +21,7 @@ public class LoginController {
     }
 
     @FXML
-    private void onLogin() {
+    private void onLogin() throws Exception{
         String user = usernameField.getText();
         String pass = passwordField.getText();
         String role = roleBox.getValue();
@@ -26,7 +30,10 @@ public class LoginController {
             messageLabel.setText("用户名或密码不能为空");
             return;
         }
-        messageLabel.setText("登录成功（演示）：" + user + " / " + role);
+        FXMLLoader fxmlLoader = new FXMLLoader(MainApplication.class.getResource("main-view.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 900, 600);
+        Stage stage = (Stage) usernameField.getScene().getWindow();
+        stage.setScene(scene);
     }
 
     @FXML
