@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.tihu.frontend.Controller.LoginController"
+            prefWidth="420" prefHeight="300">
+    <children>
+        <VBox spacing="12" alignment="CENTER" AnchorPane.leftAnchor="20" AnchorPane.rightAnchor="20"
+              AnchorPane.topAnchor="20" AnchorPane.bottomAnchor="20">
+            <Label text="TiHu 登录" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+            <GridPane hgap="10" vgap="10">
+                <Label text="用户名：" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <TextField fx:id="usernameField" promptText="请输入用户名" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                <Label text="密码：" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <PasswordField fx:id="passwordField" promptText="请输入密码" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                <Label text="角色：" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                <ComboBox fx:id="roleBox" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+            </GridPane>
+
+            <HBox spacing="10" alignment="CENTER">
+                <Button text="登录" onAction="#onLogin"/>
+                <Button text="注册" onAction="#onRegister"/>
+            </HBox>
+
+            <Label fx:id="messageLabel" textFill="red"/>
+        </VBox>
+    </children>
+</AnchorPane>
