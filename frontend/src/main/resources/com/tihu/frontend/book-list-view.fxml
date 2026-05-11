@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<SplitPane xmlns:fx="http://javafx.com/fxml"
+            xmlns="http://javafx.com/javafx"
+            fx:controller="com.tihu.frontend.Controller.BookListController"
+            prefWidth="900" prefHeight="600">
+
+    <VBox spacing="8" style="-fx-padding: 12;">
+        <Label text="图书列表" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+        <ListView fx:id="bookListView" prefHeight="500"/>
+    </VBox>
+
+    <VBox spacing="10" style="-fx-padding: 12;">
+        <Label text="图书预览" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+        <Label fx:id="bookTitleLabel" text="请选择一本图书" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+        <Label fx:id="bookInfoLabel" text="作者 / 年份 / 评分等信息"/>
+        <Separator/>
+        <Label text="简介" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+        <TextArea fx:id="bookDescArea"
+                  editable="false"
+                  wrapText="true"
+                  prefHeight="320"
+                  promptText="这里显示图书简介"/>
+    </VBox>
+</SplitPane>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.tihu.frontend.Controller.BookDetailController"
+            prefWidth="900" prefHeight="600">
+
+    <top>
+        <VBox spacing="8" style="-fx-padding: 14; -fx-background-color: #f5f5f5;">
+            <HBox spacing="10">
+                <Button text="← 返回列表" onAction="#onBackToBooks"/>
+                <Label fx:id="titleLabel" text="图书标题" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </HBox>
+            <Label fx:id="metaLabel" text="作者 / 年份 / 评分 / 分类"/>
+        </VBox>
+    </top>
+
+    <center>
+        <SplitPane dividerPositions="0.62">
+            <VBox spacing="10" style="-fx-padding: 14;">
+                <Label text="简介" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <TextArea fx:id="descArea"
+                          editable="false"
+                          wrapText="true"
+                          prefHeight="420"
+                          promptText="这里显示图书简介"/>
+            </VBox>
+
+            <VBox spacing="10" style="-fx-padding: 14;">
+                <Label text="评论" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <ListView fx:id="commentListView" prefHeight="320"/>
+
+                <Label text="发表短评" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                <TextArea fx:id="commentInputArea"
+                          promptText="写下你的评论..."
+                          wrapText="true"
+                          prefRowCount="4"/>
+
+                <HBox spacing="10">
+                    <Button text="提交评论" onAction="#onSubmitComment"/>
+                    <Button text="收藏" onAction="#onCollect"/>
+                </HBox>
+            </VBox>
+        </SplitPane>
+    </center>
+
+    <bottom>
+        <HBox spacing="10" style="-fx-padding: 10 14; -fx-background-color: #fafafa;">
+            <Label text="提示：后续可在这里补充评分星级、标签、同类图书推荐"/>
+        </HBox>
+    </bottom>
+</BorderPane>
