@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: backend
+
+server:
+  servlet:
+    context-path: /test
+  port: 8080

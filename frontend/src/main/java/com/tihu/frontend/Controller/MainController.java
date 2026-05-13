@@ -17,7 +17,7 @@ public class MainController {
 
     @FXML
     public void initialize() {
-        showBooks();
+        showHome();
     }
 
     private void setContent(Node view) {
