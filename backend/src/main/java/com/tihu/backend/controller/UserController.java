@@ -1,5 +1,6 @@
 package com.tihu.backend.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.User;
 import com.tihu.backend.service.UserService;
@@ -55,6 +56,18 @@ public class UserController {
     @GetMapping
     public Result getList() {
         return Result.success(userService.list());
+    }
+
+    /**
+     * 用户分页
+     *
+     * @param pageNumber
+     * @param pageSize
+     * @return
+     */
+    @GetMapping("/page")
+    public Result getPage(@RequestParam(defaultValue = "1") Integer pageNumber, @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(userService.page(new Page<>(pageNumber, pageSize)));
     }
 
     /**
