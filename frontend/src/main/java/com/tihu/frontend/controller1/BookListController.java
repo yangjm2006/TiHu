@@ -1,4 +1,4 @@
-package com.tihu.frontend.Controller;
+package com.tihu.frontend.controller1;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;

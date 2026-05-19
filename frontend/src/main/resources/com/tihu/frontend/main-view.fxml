@@ -4,7 +4,7 @@
 <?import javafx.scene.layout.*?>
 
 <BorderPane xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.tihu.frontend.Controller.MainController"
+            fx:controller="com.tihu.frontend.controller1.MainController"
             prefWidth="900" prefHeight="600">
 
     <top>

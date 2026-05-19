@@ -5,7 +5,7 @@
 
 <SplitPane xmlns:fx="http://javafx.com/fxml"
             xmlns="http://javafx.com/javafx"
-            fx:controller="com.tihu.frontend.Controller.BookListController"
+            fx:controller="com.tihu.frontend.controller1.BookListController"
             prefWidth="900" prefHeight="600">
 
     <VBox spacing="8" style="-fx-padding: 12;">
