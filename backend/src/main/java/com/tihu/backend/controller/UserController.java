@@ -1,5 +1,9 @@
 package com.tihu.backend.controller;
 
+import cn.dev33.satoken.stp.SaTokenInfo;
+import cn.dev33.satoken.stp.StpUtil;
+import cn.dev33.satoken.util.SaResult;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.User;
@@ -63,11 +67,20 @@ public class UserController {
      *
      * @param pageNumber
      * @param pageSize
+     * @param name
      * @return
      */
     @GetMapping("/page")
-    public Result getPage(@RequestParam(defaultValue = "1") Integer pageNumber, @RequestParam(defaultValue = "10") Integer pageSize) {
-        return Result.success(userService.page(new Page<>(pageNumber, pageSize)));
+    public Result getPage(@RequestParam(defaultValue = "1") Integer pageNumber,
+                          @RequestParam(defaultValue = "10") Integer pageSize,
+                          @RequestParam(defaultValue = "") String name) {
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        if (!name.isEmpty()) {
+            queryWrapper.like(User::getName, name);
+        }
+        return Result.success(
+                userService.page(new Page<>(pageNumber, pageSize), queryWrapper)
+        );
     }
 
     /**
@@ -80,5 +93,22 @@ public class UserController {
     public Result delete(@PathVariable Long id) {
         userService.removeById(id);
         return Result.success();
+    }
+
+    // 登录接口
+    @RequestMapping("doLogin")
+    public Result doLogin() {
+        // 第1步，先登录上
+        StpUtil.login(10001);
+        // 第2步，获取 Token  相关参数
+        SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+        // 第3步，返回给前端
+        return Result.success(tokenInfo);
+    }
+
+
+    @RequestMapping("isLogin")
+    public String isLogin() {
+        return "当前会话是否登录：" + StpUtil.isLogin();
     }
 }
