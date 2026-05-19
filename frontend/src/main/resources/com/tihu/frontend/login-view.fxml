@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 
 <AnchorPane xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.tihu.frontend.controller1.LoginController"
+            fx:controller="com.tihu.frontend.controller.LoginController"
             prefWidth="420" prefHeight="300">
     <children>
         <VBox spacing="12" alignment="CENTER" AnchorPane.leftAnchor="20" AnchorPane.rightAnchor="20"

@@ -1,4 +1,4 @@
-package com.tihu.frontend.controller1;
+package com.tihu.frontend.controller;
 
 import com.tihu.frontend.MainApplication;
 import javafx.fxml.FXML;
