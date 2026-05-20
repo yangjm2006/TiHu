@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.tihu.frontend.controller.BookListDetailController"
+            prefWidth="1000" prefHeight="680">
+    <top>
+        <VBox style="-fx-padding: 12; -fx-background-color: #f7f7f7;" spacing="6">
+            <HBox spacing="8">
+                <Button text="返回书单列表" onAction="#onBack"/>
+                <Label fx:id="titleLabel" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="书单标题"/>
+            </HBox>
+            <Label fx:id="introLabel" text="书单简介"/>
+        </VBox>
+    </top>
+    <center>
+        <VBox style="-fx-padding: 12;" spacing="8">
+            <ListView fx:id="booksListView" prefHeight="520"/>
+            <HBox spacing="8">
+                <TextField fx:id="bookIdField" promptText="输入图书ID后加入" prefWidth="180"/>
+                <Button text="加书" onAction="#onAddBook"/>
+                <Button text="移除选中图书" onAction="#onRemoveBook"/>
+            </HBox>
+            <Label fx:id="messageLabel"/>
+        </VBox>
+    </center>
+</BorderPane>

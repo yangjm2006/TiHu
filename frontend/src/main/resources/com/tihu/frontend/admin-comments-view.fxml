@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.tihu.frontend.controller.AdminCommentsController"
+      spacing="10"
+      style="-fx-padding: 16;">
+    <Label text="评论管理（逻辑删除）" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+    <HBox spacing="8">
+        <Button text="删除选中评论" onAction="#onDeleteSelected"/>
+    </HBox>
+    <Label text="全站所有评论列表（时间倒序）："/>
+    <ListView fx:id="commentsListView" prefHeight="520"/>
+    <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
+</VBox>
+

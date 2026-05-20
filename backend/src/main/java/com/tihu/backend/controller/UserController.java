@@ -1,114 +1,118 @@
 package com.tihu.backend.controller;
 
-import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
-import cn.dev33.satoken.util.SaResult;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.User;
 import com.tihu.backend.service.UserService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * 用户相关接口
+ */
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/api/users")
 public class UserController {
-    @Resource
+
+    @Autowired
     private UserService userService;
 
     /**
-     * 新增用户
-     *
-     * @param user
-     * @return
+     * 用户注册
+     * POST /api/users/register
      */
-    @PostMapping
-    public Result save(@RequestBody User user) {
-        userService.save(user);
+    @PostMapping("/register")
+    public Result register(@RequestBody User user, @RequestParam(required = false, defaultValue = "") String inviteCode) throws Exception {
+        User registered = userService.register(user.getUsername(), user.getPassword(), inviteCode);
+        return Result.success(registered);
+    }
+
+    /**
+     * 用户登录
+     * POST /api/users/login
+     */
+    @PostMapping("/login")
+    public Result login(@RequestBody User user) throws Exception {
+        User loggedIn = userService.login(user.getUsername(), user.getPassword());
+        String token = StpUtil.getTokenValue();
+
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("userInfo", loggedIn);
+        data.put("token", token);
+        return Result.success(data);
+    }
+
+    /**
+     * 用户登出
+     * POST /api/users/logout
+     */
+    @PostMapping("/logout")
+    public Result logout() {
+        StpUtil.logout();
         return Result.success();
     }
 
     /**
-     * 修改用户
-     *
-     * @param user
-     * @return
+     * 获取当前用户信息
+     * GET /api/users/me
      */
-    @PutMapping
-    Result update(@RequestBody User user) {
-        userService.updateById(user);
+    @GetMapping("/me")
+    public Result getCurrentUser() {
+        Long userId = Long.parseLong(StpUtil.getLoginId().toString());
+        User user = userService.getById(userId);
+        return Result.success(user);
+    }
+
+    /**
+     * 修改密码
+     * PUT /api/users/{id}/password
+     */
+    @PutMapping("/{id}/password")
+    public Result updatePassword(@PathVariable Long id, @RequestParam String oldPassword, @RequestParam String newPassword) throws Exception {
+        userService.updatePassword(id, oldPassword, newPassword);
         return Result.success();
     }
 
     /**
-     * 查询单个用户
-     *
-     * @param id
-     * @return
+     * 修改用户名
+     * PUT /api/users/{id}/username
      */
-    @GetMapping("/{id}")
-    public Result getOne(@PathVariable Long id) {
-        return Result.success(userService.getById(id));
+    @PutMapping("/{id}/username")
+    public Result updateUsername(@PathVariable Long id, @RequestParam String newUsername) throws Exception {
+        userService.updateUsername(id, newUsername);
+        return Result.success();
     }
 
     /**
-     * 查询所有用户
-     *
-     * @return
+     * 获取用户信息（通过用户名）
+     * GET /api/users/profile/{username}
      */
-    @GetMapping
-    public Result getList() {
-        return Result.success(userService.list());
-    }
-
-    /**
-     * 用户分页
-     *
-     * @param pageNumber
-     * @param pageSize
-     * @param name
-     * @return
-     */
-    @GetMapping("/page")
-    public Result getPage(@RequestParam(defaultValue = "1") Integer pageNumber,
-                          @RequestParam(defaultValue = "10") Integer pageSize,
-                          @RequestParam(defaultValue = "") String name) {
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        if (!name.isEmpty()) {
-            queryWrapper.like(User::getName, name);
+    @GetMapping("/profile/{username}")
+    public Result getUserProfile(@PathVariable String username) {
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            return Result.error(404, "用户不存在", null);
         }
-        return Result.success(
-                userService.page(new Page<>(pageNumber, pageSize), queryWrapper)
-        );
+        return Result.success(user);
     }
 
     /**
-     * 删除单个用户
-     *
-     * @param id
-     * @return
+     * 管理员接口：封禁用户
+     * POST /api/users/admin/{id}/ban
      */
-    @DeleteMapping("/{id}")
-    public Result delete(@PathVariable Long id) {
-        userService.removeById(id);
+    @PostMapping("/admin/{id}/ban")
+    public Result banUser(@PathVariable Long id, @RequestParam Long durationSeconds) {
+        userService.banUser(id, durationSeconds);
         return Result.success();
     }
 
-    // 登录接口
-    @RequestMapping("doLogin")
-    public Result doLogin() {
-        // 第1步，先登录上
-        StpUtil.login(10001);
-        // 第2步，获取 Token  相关参数
-        SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-        // 第3步，返回给前端
-        return Result.success(tokenInfo);
-    }
-
-
-    @RequestMapping("isLogin")
-    public String isLogin() {
-        return "当前会话是否登录：" + StpUtil.isLogin();
+    /**
+     * 管理员接口：解封用户
+     * DELETE /api/users/admin/{id}/ban
+     */
+    @DeleteMapping("/admin/{id}/ban")
+    public Result unbanUser(@PathVariable Long id) {
+        userService.unbanUser(id);
+        return Result.success();
     }
 }

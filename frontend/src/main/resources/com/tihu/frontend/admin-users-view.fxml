@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.tihu.frontend.controller.AdminUsersController"
+      spacing="10"
+      style="-fx-padding: 16;">
+    <Label text="用户管理 - 封禁/解封" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+    <HBox spacing="8">
+        <TextField fx:id="usernameField" promptText="用户名"/>
+        <TextField fx:id="hoursField" promptText="指定小时数（如24）"/>
+        <Button text="封禁" onAction="#onBan"/>
+        <Button text="解封" onAction="#onUnban"/>
+    </HBox>
+    <Label text="被封禁用户列表（按到期时间排序）："/>
+    <ListView fx:id="bannedListView" prefHeight="480"/>
+    <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
+</VBox>
+

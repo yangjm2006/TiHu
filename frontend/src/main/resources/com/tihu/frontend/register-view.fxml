@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.tihu.frontend.controller.RegisterController"
+            prefWidth="500" prefHeight="360">
+    <children>
+        <VBox spacing="12" alignment="CENTER" AnchorPane.leftAnchor="24" AnchorPane.rightAnchor="24"
+              AnchorPane.topAnchor="20" AnchorPane.bottomAnchor="20">
+            <Label text="注册普通用户" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+            <GridPane hgap="10" vgap="10">
+                <Label text="用户名：" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <TextField fx:id="usernameField" promptText="2~10 字符" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                <Label text="密码：" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <PasswordField fx:id="passwordField" promptText="6~12，含数字和字母" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+            </GridPane>
+
+            <HBox spacing="10" alignment="CENTER">
+                <Button text="提交注册" onAction="#onSubmit"/>
+                <Button text="返回登录" onAction="#onBack"/>
+            </HBox>
+            <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
+        </VBox>
+    </children>
+</AnchorPane>
+

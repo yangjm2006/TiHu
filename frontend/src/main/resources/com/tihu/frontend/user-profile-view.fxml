@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.tihu.frontend.controller.UserProfileController"
+            prefWidth="1000" prefHeight="680">
+    <top>
+        <VBox spacing="8" style="-fx-padding: 12; -fx-background-color: #f7f7f7;">
+            <Label text="用户主页" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+            <HBox spacing="8">
+                <TextField fx:id="usernameField" promptText="输入用户名" prefWidth="180"/>
+                <Button text="查看主页" onAction="#onLoadProfile"/>
+                <Button text="关注" onAction="#onFollow"/>
+                <Button text="取关" onAction="#onUnfollow"/>
+            </HBox>
+            <Label fx:id="userLabel"/>
+            <Label fx:id="relationLabel"/>
+        </VBox>
+    </top>
+    <center>
+        <SplitPane dividerPositions="0.55">
+            <VBox spacing="8" style="-fx-padding: 12;">
+                <Label text="TA 的评论列表（倒序）"/>
+                <ListView fx:id="commentsListView" prefHeight="500"/>
+            </VBox>
+            <VBox spacing="8" style="-fx-padding: 12;">
+                <Label text="TA 的公开书单"/>
+                <ListView fx:id="bookListsView" prefHeight="500"/>
+            </VBox>
+        </SplitPane>
+    </center>
+    <bottom>
+        <HBox style="-fx-padding: 8 12;">
+            <Label fx:id="messageLabel" textFill="red"/>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -1,22 +1,36 @@
 package com.tihu.frontend.controller;
 
 import com.tihu.frontend.MainApplication;
+import com.tihu.frontend.utils.AppContext;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 public class MainController {
 
     @FXML private TextField searchField;
     @FXML private StackPane contentPane;
+    @FXML private Label userLabel;
+    @FXML private Label adminLabel;
+    @FXML private VBox adminBox;
 
-    private BookListController bookListController;
+    private final AppContext context = AppContext.getInstance();
+    private Object currentContentController;
 
     @FXML
     public void initialize() {
+        userLabel.setText("用户：" + context.username() + "（" + context.role() + "）");
+        boolean isAdmin = context.isAdmin();
+        adminLabel.setVisible(isAdmin);
+        adminLabel.setManaged(isAdmin);
+        adminBox.setVisible(isAdmin);
+        adminBox.setManaged(isAdmin);
         showHome();
     }
 
@@ -24,43 +38,77 @@ public class MainController {
         contentPane.getChildren().setAll(view);
     }
 
-    private void showBooks() {
+    private void loadContent(String fxml) {
         try {
-            FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("book-list-view.fxml"));
-            setContent(loader.load());
-            bookListController = loader.getController();
-            bookListController.setOnBookSelected(this::showBookDetail);
+            FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource(fxml));
+            Node view = loader.load();
+            currentContentController = loader.getController();
+            if (currentContentController instanceof MainContentController contentController) {
+                contentController.setMainController(this);
+                contentController.onShow();
+            }
+            setContent(view);
         } catch (Exception e) {
-            setContent(new Label("加载图书列表失败：" + e.getMessage()));
+            setContent(new Label("加载页面失败：" + e.getMessage()));
         }
     }
 
-    private void showBookDetail(String title) {
-        try {
-            FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("book-detail-view.fxml"));
-            setContent(loader.load());
-            BookDetailController controller = loader.getController();
-            controller.setBook(title);
-            controller.setOnBack(this::showBooks);
-        } catch (Exception e) {
-            setContent(new Label("加载图书详情失败：" + e.getMessage()));
-        }
+    public void openBookDetail(int bookId) {
+        context.setSelectedBookId(bookId);
+        loadContent("book-detail-view.fxml");
     }
 
-    @FXML private void onSearch() {
+    public void openBookListDetail(long listId) {
+        openBookListDetail(context.username(), listId);
+    }
+
+    public void openBookListDetail(String owner, long listId) {
+        context.setSelectedBookListId(listId);
+        context.setSelectedBookListOwner(owner);
+        loadContent("book-list-detail-view.fxml");
+    }
+
+    public void openChat(String peer) {
+        context.setSelectedConversationPeer(peer);
+        loadContent("chat-view.fxml");
+    }
+
+    @FXML
+    private void onSearch() {
         String keyword = searchField.getText();
-        showBooks();
-        bookListController.filterBooks(keyword);
+        loadContent("book-list-view.fxml");
+        if (currentContentController instanceof BookListController bookListController) {
+            bookListController.search(keyword);
+        }
     }
 
     @FXML private void onHome() { showHome(); }
-    @FXML private void onBooks() { showBooks(); }
-    @FXML private void onMovies() { showPlaceholder("电影模块"); }
-    @FXML private void onForum() { showPlaceholder("讨论区模块"); }
-    @FXML private void onProfile() { showPlaceholder("个人中心模块"); }
+    @FXML public void onBooks() { loadContent("book-list-view.fxml"); }
+    @FXML public void onFavorites() { loadContent("favorites-view.fxml"); }
+    @FXML public void onBookLists() { loadContent("book-lists-view.fxml"); }
+    @FXML public void onUserProfile() { loadContent("user-profile-view.fxml"); }
+    @FXML public void onProfileEdit() { loadContent("profile-edit-view.fxml"); }
+    @FXML public void onFollowing() { context.setShowingFollowers(false); loadContent("following-view.fxml"); }
+    @FXML public void onFollowers() { context.setShowingFollowers(true); loadContent("following-view.fxml"); }
+    @FXML public void onConversations() { loadContent("conversations-view.fxml"); }
+    @FXML private void onAdminBooks() { loadContent("admin-books-view.fxml"); }
+    @FXML private void onAdminUsers() { loadContent("admin-users-view.fxml"); }
+    @FXML private void onAdminComments() { loadContent("admin-comments-view.fxml"); }
+
+    @FXML
+    private void onLogout() {
+        try {
+            context.logout();
+            FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
+            Stage stage = (Stage) contentPane.getScene().getWindow();
+            stage.setScene(new Scene(loader.load(), 520, 380));
+        } catch (Exception ex) {
+            setContent(new Label("登出失败：" + ex.getMessage()));
+        }
+    }
 
     private void showHome() {
-        showPlaceholder("欢迎来到 TiHu", "这里是首页，后续可展示热门图书、最新评论和推荐内容。");
+        loadContent("home-view.fxml");
     }
 
     private void showPlaceholder(String title) {

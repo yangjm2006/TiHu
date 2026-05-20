@@ -6,9 +6,9 @@
 
 <AnchorPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.LoginController"
-            prefWidth="420" prefHeight="300">
+            prefWidth="520" prefHeight="380">
     <children>
-        <VBox spacing="12" alignment="CENTER" AnchorPane.leftAnchor="20" AnchorPane.rightAnchor="20"
+        <VBox spacing="12" alignment="CENTER" AnchorPane.leftAnchor="24" AnchorPane.rightAnchor="24"
               AnchorPane.topAnchor="20" AnchorPane.bottomAnchor="20">
             <Label text="TiHu 登录" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
             <GridPane hgap="10" vgap="10">
@@ -17,17 +17,16 @@
 
                 <Label text="密码：" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                 <PasswordField fx:id="passwordField" promptText="请输入密码" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-
-                <Label text="角色：" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                <ComboBox fx:id="roleBox" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
             </GridPane>
 
             <HBox spacing="10" alignment="CENTER">
                 <Button text="登录" onAction="#onLogin"/>
-                <Button text="注册" onAction="#onRegister"/>
+                <Button text="注册普通用户" onAction="#onOpenUserRegister"/>
+                <Button text="注册管理员" onAction="#onOpenAdminRegister"/>
             </HBox>
 
-            <Label fx:id="messageLabel" textFill="red"/>
+            <Label text="测试账号：admin/Admin123 或 alice/Alice123" style="-fx-text-fill: #555;"/>
+            <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
         </VBox>
     </children>
 </AnchorPane>

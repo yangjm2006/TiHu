@@ -5,24 +5,37 @@
 
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.MainController"
-            prefWidth="900" prefHeight="600">
+            prefWidth="1220" prefHeight="760">
 
     <top>
         <HBox spacing="10" style="-fx-padding: 10; -fx-background-color: #f0f0f0; -fx-alignment: center-left;">
             <Label text="TiHu" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <TextField fx:id="searchField" promptText="搜索图书 / 作者" prefWidth="260"/>
+            <TextField fx:id="searchField" promptText="搜索书名" prefWidth="220"/>
             <Button text="搜索" onAction="#onSearch"/>
+            <Label fx:id="userLabel" style="-fx-font-weight: bold;"/>
+            <Button text="登出" onAction="#onLogout"/>
         </HBox>
     </top>
 
     <left>
-        <VBox spacing="8" style="-fx-padding: 10; -fx-background-color: #fafafa;" prefWidth="160">
+        <VBox spacing="8" style="-fx-padding: 10; -fx-background-color: #fafafa;" prefWidth="200">
             <Button text="首页" onAction="#onHome"/>
             <Button text="图书" onAction="#onBooks"/>
-            <Button text="电影" onAction="#onMovies"/>
-            <Button text="讨论区" onAction="#onForum"/>
-            <Button text="我的" onAction="#onProfile"/>
+            <Button text="我的收藏" onAction="#onFavorites"/>
+            <Button text="我的书单" onAction="#onBookLists"/>
+            <Button text="用户主页" onAction="#onUserProfile"/>
+            <Button text="个人信息" onAction="#onProfileEdit"/>
+            <Button text="关注列表" onAction="#onFollowing"/>
+            <Button text="粉丝列表" onAction="#onFollowers"/>
+            <Button text="私信会话" onAction="#onConversations"/>
+            <Separator/>
+            <Label text="管理员" fx:id="adminLabel"/>
+            <VBox fx:id="adminBox" spacing="8">
+                <Button text="图书管理" onAction="#onAdminBooks"/>
+                <Button text="用户封禁" onAction="#onAdminUsers"/>
+                <Button text="评论管理" onAction="#onAdminComments"/>
+            </VBox>
         </VBox>
     </left>
 
@@ -32,7 +45,7 @@
 
     <bottom>
         <HBox style="-fx-padding: 8 12; -fx-background-color: #fafafa;">
-            <Label text="图书评论打分系统"/>
+            <Label text="V1: 图书、评分、评论/回复、点赞点踩、收藏、书单、关注、私信、后台管理"/>
         </HBox>
     </bottom>
 </BorderPane>

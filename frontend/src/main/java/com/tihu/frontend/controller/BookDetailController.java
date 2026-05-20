@@ -1,84 +1,197 @@
 package com.tihu.frontend.controller;
 
+import com.tihu.frontend.service.MockBackendService;
+import com.tihu.frontend.utils.AppContext;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextArea;
 
-public class BookDetailController {
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public class BookDetailController implements MainContentController {
 
     @FXML private Label titleLabel;
     @FXML private Label metaLabel;
     @FXML private TextArea descArea;
+    @FXML private Label ratingSummaryLabel;
+    @FXML private TextArea distributionArea;
+    @FXML private Spinner<Integer> myScoreSpinner;
     @FXML private ListView<String> commentListView;
     @FXML private TextArea commentInputArea;
+    @FXML private Label messageLabel;
 
-    private Runnable onBack;
+    private final AppContext context = AppContext.getInstance();
+    private MainController mainController;
+    private final List<MockBackendService.CommentItem> flattenComments = new ArrayList<>();
+    private int bookId;
+
+    @Override
+    public void setMainController(MainController mainController) {
+        this.mainController = mainController;
+    }
 
     @FXML
     public void initialize() {
-        showBook("三体");
+        myScoreSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10, 1));
     }
 
-    public void setBook(String title) {
-        showBook(title);
-    }
-
-    public void setOnBack(Runnable onBack) {
-        this.onBack = onBack;
-    }
-
-    private void showBook(String title) {
-        titleLabel.setText(title);
-
-        if ("三体".equals(title)) {
-            metaLabel.setText("作者：刘慈欣  |  年份：2008  |  评分：9.3  |  分类：科幻");
-            descArea.setText("《三体》是刘慈欣创作的长篇科幻小说，讲述人类文明与三体文明之间的故事。\n\n这里先放占位简介，后续可以接数据库或接口数据。");
-            commentListView.getItems().setAll(
-                    "很震撼的一本书，世界观太宏大了。",
-                    "前期略慢，但越看越上头。",
-                    "科幻爱好者必读。"
-            );
-        } else if ("解忧杂货店".equals(title)) {
-            metaLabel.setText("作者：东野圭吾  |  年份：2012  |  评分：8.6  |  分类：治愈/小说");
-            descArea.setText("《解忧杂货店》讲述一家神秘杂货店通过信件连接过去与现在的故事。\n\n这里先放占位简介，后续可以接数据库或接口数据。");
-            commentListView.getItems().setAll(
-                    "读完很温暖。",
-                    "故事结构很巧妙。"
-            );
-        } else if ("活着".equals(title)) {
-            metaLabel.setText("作者：余华  |  年份：1993  |  评分：9.1  |  分类：现实主义");
-            descArea.setText("《活着》是余华的代表作之一，讲述普通人在时代变迁中的命运。\n\n这里先放占位简介，后续可以接数据库或接口数据。");
-            commentListView.getItems().setAll(
-                    "文字朴素但很有力量。",
-                    "看完心情复杂。"
-            );
-        } else {
-            metaLabel.setText("作者：待填  |  年份：待填  |  评分：待填  |  分类：待填");
-            descArea.setText("这里是《" + title + "》的详情介绍。后续可以接数据库或接口数据。");
-            commentListView.getItems().setAll("暂无评论");
+    @Override
+    public void onShow() {
+        Integer selectedBookId = context.selectedBookId();
+        if (selectedBookId != null) {
+            bookId = selectedBookId;
+            refresh();
         }
     }
 
     @FXML
-    private void onSubmitComment() {
-        String text = commentInputArea.getText();
-        if (text != null && !text.isBlank()) {
-            commentListView.getItems().add(0, text.trim());
-            commentInputArea.clear();
+    private void onRate() {
+        try {
+            context.service().rateBook(bookId, context.username(), myScoreSpinner.getValue());
+            messageLabel.setText("评分已提交");
+            refresh();
+        } catch (Exception ex) {
+            messageLabel.setText(ex.getMessage());
         }
     }
 
     @FXML
     private void onCollect() {
-        metaLabel.setText(metaLabel.getText() + "  |  已收藏");
+        try {
+            context.service().toggleFavorite(context.username(), bookId);
+            messageLabel.setText("收藏状态已切换");
+        } catch (Exception ex) {
+            messageLabel.setText(ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onSubmitComment() {
+        try {
+            context.service().addComment(bookId, context.username(), commentInputArea.getText(), null);
+            commentInputArea.clear();
+            refresh();
+        } catch (Exception ex) {
+            messageLabel.setText(ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onReplySelected() {
+        try {
+            int idx = commentListView.getSelectionModel().getSelectedIndex();
+            if (idx < 0 || idx >= flattenComments.size()) {
+                messageLabel.setText("请先选择一级评论");
+                return;
+            }
+            MockBackendService.CommentItem selected = flattenComments.get(idx);
+            if (selected.parentId() != null) {
+                messageLabel.setText("只能回复一级评论");
+                return;
+            }
+            context.service().addComment(bookId, context.username(), commentInputArea.getText(), selected.id());
+            commentInputArea.clear();
+            refresh();
+        } catch (Exception ex) {
+            messageLabel.setText(ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onDeleteOwnComment() {
+        int idx = commentListView.getSelectionModel().getSelectedIndex();
+        if (idx < 0 || idx >= flattenComments.size()) {
+            messageLabel.setText("请先选择评论");
+            return;
+        }
+        MockBackendService.CommentItem selected = flattenComments.get(idx);
+        if (context.isAdmin()) {
+            context.service().adminDeleteComment(bookId, selected.id());
+        } else {
+            context.service().deleteOwnComment(bookId, selected.id(), context.username());
+        }
+        refresh();
+    }
+
+    @FXML
+    private void onUpVote() {
+        voteSelected(1);
+    }
+
+    @FXML
+    private void onDownVote() {
+        voteSelected(-1);
     }
 
     @FXML
     private void onBackToBooks() {
-        if (onBack != null) {
-            onBack.run();
+        if (mainController != null) {
+            mainController.onBooks();
         }
     }
-}
 
+    private void voteSelected(int target) {
+        int idx = commentListView.getSelectionModel().getSelectedIndex();
+        if (idx < 0 || idx >= flattenComments.size()) {
+            messageLabel.setText("请先选择评论");
+            return;
+        }
+        try {
+            context.service().voteComment(flattenComments.get(idx).id(), context.username(), target);
+            refresh();
+        } catch (Exception ex) {
+            messageLabel.setText(ex.getMessage());
+        }
+    }
+
+    private void refresh() {
+        MockBackendService.BookDetail detail = context.service().getBookDetail(bookId, context.username());
+        titleLabel.setText(detail.book().title());
+        metaLabel.setText("作者：" + detail.book().author() + "  |  标签：" + String.join(", ", detail.book().tags()));
+        descArea.setText(detail.book().intro());
+
+        MockBackendService.RatingSummary summary = detail.ratingSummary();
+        String avgText = summary.count() == 0 ? "暂无评分" : String.format("%.1f", summary.average());
+        ratingSummaryLabel.setText("平均分：" + avgText + "（" + summary.count() + "人）");
+        distributionArea.setText(formatDistribution(summary.distribution()));
+        if (summary.myScore() != null) {
+            myScoreSpinner.getValueFactory().setValue(summary.myScore());
+        }
+
+        flattenComments.clear();
+        List<String> textItems = new ArrayList<>();
+        for (MockBackendService.CommentItem comment : detail.comments()) {
+            flattenComments.add(comment);
+            textItems.add(formatComment(comment, false));
+            for (MockBackendService.CommentItem reply : detail.replies()) {
+                if (Objects.equals(reply.parentId(), comment.id())) {
+                    flattenComments.add(reply);
+                    textItems.add(formatComment(reply, true));
+                }
+            }
+        }
+        commentListView.getItems().setAll(textItems);
+    }
+
+    private String formatDistribution(Map<Integer, Integer> dist) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 10; i >= 1; i--) {
+            sb.append(i).append("分：").append(dist.getOrDefault(i, 0)).append("人");
+            if (i > 1) {
+                sb.append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    private String formatComment(MockBackendService.CommentItem item, boolean reply) {
+        String prefix = reply ? "  -> " : "";
+        return prefix + item.user() + "：" + item.content() + "  [赞" + item.upVotes() + "/踩" + item.downVotes() + "]";
+    }
+}

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.tihu.frontend.controller.FavoritesController"
+            prefWidth="1000" prefHeight="680">
+    <top>
+        <HBox spacing="10" style="-fx-padding: 12; -fx-background-color: #f7f7f7; -fx-alignment: center-left;">
+            <Label text="我的收藏" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="查看详情" onAction="#onOpenDetail"/>
+        </HBox>
+    </top>
+    <center>
+        <TableView fx:id="favoritesTable" columnResizePolicy="CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN">
+            <columns>
+                <TableColumn fx:id="titleColumn" text="书名"/>
+                <TableColumn fx:id="authorColumn" text="作者"/>
+                <TableColumn fx:id="ratingColumn" text="平均评分"/>
+            </columns>
+        </TableView>
+    </center>
+    <bottom>
+        <HBox style="-fx-padding: 8 12;">
+            <Label fx:id="messageLabel"/>
+        </HBox>
+    </bottom>
+</BorderPane>
+

@@ -1,0 +1,41 @@
+package com.tihu.backend.service;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.tihu.backend.entity.BookList;
+
+/**
+ * 书单Service
+ */
+public interface BookListService extends IService<BookList> {
+    /**
+     * 创建书单
+     */
+    BookList createBookList(Long userId, String title, String description) throws Exception;
+    
+    /**
+     * 获取用户的书单列表
+     */
+    Page<BookList> getUserBookLists(Long userId, int pageNum, int pageSize);
+    
+    /**
+     * 获取书单详情（含书籍列表）
+     */
+    Object getBookListDetail(Long bookListId);
+    
+    /**
+     * 添加书到书单
+     */
+    void addBookToList(Long bookListId, Long bookId, Long userId) throws Exception;
+    
+    /**
+     * 从书单移除书
+     */
+    void removeBookFromList(Long bookListId, Long bookId, Long userId) throws Exception;
+    
+    /**
+     * 删除书单
+     */
+    void deleteBookList(Long bookListId, Long userId) throws Exception;
+}
+

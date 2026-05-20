@@ -3,26 +3,42 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<SplitPane xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns:fx="http://javafx.com/fxml"
             xmlns="http://javafx.com/javafx"
             fx:controller="com.tihu.frontend.controller.BookListController"
-            prefWidth="900" prefHeight="600">
+            prefWidth="1000" prefHeight="680">
+    <top>
+        <VBox spacing="8" style="-fx-padding: 12; -fx-background-color: #f7f7f7;">
+            <Label text="图书列表" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+            <HBox spacing="8">
+                <TextField fx:id="titleSearchField" promptText="按书名模糊搜索" prefWidth="220"/>
+                <TextField fx:id="tagsSearchField" promptText="按标签 AND 搜索，例如：科幻, 宇宙" prefWidth="280"/>
+                <Button text="搜索" onAction="#onSearch"/>
+                <Button text="重置" onAction="#onReset"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label text="排序："/>
+                <ComboBox fx:id="sortBox" prefWidth="170"/>
+            </HBox>
+        </VBox>
+    </top>
 
-    <VBox spacing="8" style="-fx-padding: 12;">
-        <Label text="图书列表" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
-        <ListView fx:id="bookListView" prefHeight="500"/>
-    </VBox>
+    <center>
+        <TableView fx:id="bookTableView" columnResizePolicy="CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN">
+            <columns>
+                <TableColumn fx:id="titleColumn" text="书名" prefWidth="220"/>
+                <TableColumn fx:id="authorColumn" text="作者" prefWidth="180"/>
+                <TableColumn fx:id="ratingColumn" text="平均评分" prefWidth="130"/>
+                <TableColumn fx:id="tagsColumn" text="标签摘要" prefWidth="320"/>
+            </columns>
+        </TableView>
+    </center>
 
-    <VBox spacing="10" style="-fx-padding: 12;">
-        <Label text="图书预览" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
-        <Label fx:id="bookTitleLabel" text="请选择一本图书" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-        <Label fx:id="bookInfoLabel" text="作者 / 年份 / 评分等信息"/>
-        <Separator/>
-        <Label text="简介" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
-        <TextArea fx:id="bookDescArea"
-                  editable="false"
-                  wrapText="true"
-                  prefHeight="320"
-                  promptText="这里显示图书简介"/>
-    </VBox>
-</SplitPane>
+    <bottom>
+        <HBox spacing="8" style="-fx-padding: 10; -fx-alignment: center-right;">
+            <Label fx:id="pageInfoLabel" text="第 1/1 页"/>
+            <Button text="上一页" onAction="#onPrevPage"/>
+            <Button text="下一页" onAction="#onNextPage"/>
+            <Button text="查看详情" onAction="#onOpenDetail"/>
+        </HBox>
+    </bottom>
+</BorderPane>
