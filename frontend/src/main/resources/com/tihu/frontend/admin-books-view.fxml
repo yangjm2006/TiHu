@@ -3,7 +3,8 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.AdminBooksController"
             prefWidth="1000" prefHeight="680">
     <left>
@@ -22,7 +23,7 @@
         </VBox>
     </left>
     <center>
-        <TableView fx:id="tableView" columnResizePolicy="CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN">
+        <TableView fx:id="tableView" columnResizePolicy="CONSTRAINED_RESIZE_POLICY">
             <columns>
                 <TableColumn fx:id="titleColumn" text="书名"/>
                 <TableColumn fx:id="authorColumn" text="作者"/>

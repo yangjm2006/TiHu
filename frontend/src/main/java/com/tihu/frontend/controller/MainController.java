@@ -40,16 +40,30 @@ public class MainController {
 
     private void loadContent(String fxml) {
         try {
-            FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource(fxml));
+            java.net.URL location = MainApplication.class.getResource("/com/tihu/frontend/" + fxml);
+            if (location == null) {
+                throw new IllegalStateException("找不到页面资源：" + fxml);
+            }
+            FXMLLoader loader = new FXMLLoader(location);
             Node view = loader.load();
             currentContentController = loader.getController();
             if (currentContentController instanceof MainContentController contentController) {
                 contentController.setMainController(this);
-                contentController.onShow();
+                try {
+                    contentController.onShow();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
             setContent(view);
         } catch (Exception e) {
-            setContent(new Label("加载页面失败：" + e.getMessage()));
+            e.printStackTrace();
+            String detail = e.getMessage();
+            Throwable cause = e.getCause();
+            if (cause != null && cause.getMessage() != null && !cause.getMessage().isBlank()) {
+                detail = cause.getMessage();
+            }
+            setContent(new Label("加载页面失败：" + detail));
         }
     }
 

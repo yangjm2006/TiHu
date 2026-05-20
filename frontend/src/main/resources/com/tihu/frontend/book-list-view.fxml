@@ -23,7 +23,7 @@
     </top>
 
     <center>
-        <TableView fx:id="bookTableView" columnResizePolicy="CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN">
+        <TableView fx:id="bookTableView">
             <columns>
                 <TableColumn fx:id="titleColumn" text="书名" prefWidth="220"/>
                 <TableColumn fx:id="authorColumn" text="作者" prefWidth="180"/>

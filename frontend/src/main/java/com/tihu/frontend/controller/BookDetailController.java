@@ -112,7 +112,7 @@ public class BookDetailController implements MainContentController {
         }
         MockBackendService.CommentItem selected = flattenComments.get(idx);
         if (context.isAdmin()) {
-            context.service().adminDeleteComment(bookId, selected.id());
+            context.service().adminDeleteComment(selected.id());
         } else {
             context.service().deleteOwnComment(bookId, selected.id(), context.username());
         }

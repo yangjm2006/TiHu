@@ -3,7 +3,8 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.FavoritesController"
             prefWidth="1000" prefHeight="680">
     <top>
@@ -14,7 +15,7 @@
         </HBox>
     </top>
     <center>
-        <TableView fx:id="favoritesTable" columnResizePolicy="CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN">
+        <TableView fx:id="favoritesTable">
             <columns>
                 <TableColumn fx:id="titleColumn" text="书名"/>
                 <TableColumn fx:id="authorColumn" text="作者"/>
