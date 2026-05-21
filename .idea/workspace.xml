@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee7fe98c-96d1-435c-9305-9f69070f3457" name="更改" comment="" />
+    <list default="true" id="ee7fe98c-96d1-435c-9305-9f69070f3457" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/service/RemoteBackendService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/LoginController.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/LoginController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/request/ApiClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/request/ApiClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/service/MockBackendService.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/service/MockBackendService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/utils/AppContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/utils/AppContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/module-info.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/module-info.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -12,12 +25,21 @@
       <entry key="_C:/Users/19673/Desktop/TiHu" value="3DylpN6WmjBFbakrIM1FrbZpVlX" />
     </persistenceIdMap>
   </component>
+  <component name="CopilotUserSelectedChatMode">
+    <option name="chatModeId" value="Agent" />
+  </component>
+  <component name="CopilotUserSelectedModel">
+    <selectedModels>
+      <entry key="agent-panel" value="GPT-5.4 mini" />
+      <entry key="chat-panel" value="GPT-5.4 mini" />
+    </selectedModels>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 6
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="3DylpN6WmjBFbakrIM1FrbZpVlX" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -32,6 +54,12 @@
     "git-widget-placeholder": "master",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/Users/19673/Desktop/TiHu",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "com.github.copilot.settings.customization.CustomizationConfigurable",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -51,6 +79,8 @@
       <option name="presentableId" value="Default" />
       <updated>1779262372012</updated>
       <workItem from="1779262373048" duration="63000" />
+      <workItem from="1779347361986" duration="532000" />
+      <workItem from="1779347931977" duration="2604000" />
     </task>
     <servers />
   </component>

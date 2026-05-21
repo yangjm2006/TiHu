@@ -2,6 +2,8 @@ module com.tihu.frontend {
     requires javafx.controls;
     requires javafx.fxml;
     requires java.net.http;
+    requires com.fasterxml.jackson.databind;
+    requires com.fasterxml.jackson.annotation;
 
     opens com.tihu.frontend to javafx.fxml;
     exports com.tihu.frontend;

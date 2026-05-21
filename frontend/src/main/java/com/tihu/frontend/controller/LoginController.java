@@ -5,11 +5,13 @@ import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
+import javafx.concurrent.Task;
 
 public class LoginController {
 
@@ -28,17 +30,34 @@ public class LoginController {
             messageLabel.setText("用户名或密码不能为空");
             return;
         }
-        try {
-            MockBackendService.Role role = context.service().login(user.trim(), pass.trim());
-            context.login(user.trim(), role);
+        Task<MockBackendService.Role> loginTask = new Task<>() {
+            @Override
+            protected MockBackendService.Role call() throws Exception {
+                return context.service().login(user.trim(), pass.trim());
+            }
+        };
 
-            FXMLLoader fxmlLoader = new FXMLLoader(MainApplication.class.getResource("main-view.fxml"));
-            Scene scene = new Scene(fxmlLoader.load(), 1220, 760);
-            Stage stage = (Stage) usernameField.getScene().getWindow();
-            stage.setScene(scene);
-        } catch (Exception ex) {
-            messageLabel.setText(ex.getMessage());
-        }
+        loginTask.setOnSucceeded(event -> {
+            MockBackendService.Role role = loginTask.getValue();
+            context.login(user.trim(), role);
+            try {
+                FXMLLoader fxmlLoader = new FXMLLoader(MainApplication.class.getResource("main-view.fxml"));
+                Scene scene = new Scene(fxmlLoader.load(), 1220, 760);
+                Stage stage = (Stage) usernameField.getScene().getWindow();
+                stage.setScene(scene);
+            } catch (Exception ex) {
+                messageLabel.setText(ex.getMessage());
+            }
+        });
+
+        loginTask.setOnFailed(event -> {
+            Throwable ex = loginTask.getException();
+            messageLabel.setText(ex == null ? "登录失败" : ex.getMessage());
+        });
+
+        Thread thread = new Thread(loginTask, "tihu-login-thread");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     @FXML

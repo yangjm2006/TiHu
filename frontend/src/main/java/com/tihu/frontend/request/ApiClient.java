@@ -2,18 +2,39 @@ package com.tihu.frontend.request;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class ApiClient {
     private final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private final String baseUrl;
+    private String token;
     private String sessionCookie;
 
+    public ApiClient() {
+        this(resolveBaseUrl());
+    }
+
     public ApiClient(String baseUrl) {
-        this.baseUrl = baseUrl;
+        this.baseUrl = normalizeBaseUrl(baseUrl);
+    }
+
+    public String baseUrl() {
+        return baseUrl;
+    }
+
+    public String token() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token == null || token.isBlank() ? null : token.trim();
     }
 
     public String sessionCookie() {
@@ -25,21 +46,50 @@ public class ApiClient {
     }
 
     public String get(String path) throws IOException, InterruptedException {
-        HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(baseUrl + path)).GET();
-        attachCookie(builder);
-        HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
-        captureCookie(response);
-        return response.body();
+        return send("GET", path, null);
     }
 
     public String post(String path, String json) throws IOException, InterruptedException {
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + path))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json == null ? "{}" : json));
+        return send("POST", path, json);
+    }
+
+    public String put(String path, String json) throws IOException, InterruptedException {
+        return send("PUT", path, json);
+    }
+
+    public String delete(String path) throws IOException, InterruptedException {
+        return send("DELETE", path, null);
+    }
+
+    public String send(String method, String path, String body) throws IOException, InterruptedException {
+        HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(baseUrl + path))
+                .timeout(Duration.ofSeconds(15))
+                .header("Accept", "application/json");
+        if (token != null && !token.isBlank()) {
+            builder.header("Authorization", token);
+        }
         attachCookie(builder);
+
+        switch (method.toUpperCase()) {
+            case "POST" -> builder.header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body == null ? "{}" : body));
+            case "PUT" -> builder.header("Content-Type", "application/json")
+                    .PUT(HttpRequest.BodyPublishers.ofString(body == null ? "{}" : body));
+            case "DELETE" -> {
+                if (body == null) {
+                    builder.DELETE();
+                } else {
+                    builder.method("DELETE", HttpRequest.BodyPublishers.ofString(body));
+                }
+            }
+            case "GET" -> builder.GET();
+            default -> builder.method(method.toUpperCase(), body == null
+                    ? HttpRequest.BodyPublishers.noBody()
+                    : HttpRequest.BodyPublishers.ofString(body));
+        }
+
         HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
-        captureCookie(response);
+        captureSession(response);
         return response.body();
     }
 
@@ -49,11 +99,59 @@ public class ApiClient {
         }
     }
 
-    private void captureCookie(HttpResponse<String> response) {
+    private void captureSession(HttpResponse<String> response) {
+        String authHeader = response.headers().firstValue("Authorization").orElse(null);
+        if (authHeader != null && !authHeader.isBlank()) {
+            token = authHeader.trim();
+        }
         String setCookie = response.headers().firstValue("Set-Cookie").orElse(null);
         if (setCookie != null && !setCookie.isBlank()) {
             sessionCookie = setCookie.split(";", 2)[0];
         }
+    }
+
+    public static String encodeQuery(Map<String, ?> params) {
+        if (params == null || params.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder("?");
+        boolean first = true;
+        for (Map.Entry<String, ?> entry : new LinkedHashMap<>(params).entrySet()) {
+            if (entry.getValue() == null) {
+                continue;
+            }
+            if (!first) {
+                sb.append('&');
+            }
+            first = false;
+            sb.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
+            sb.append('=');
+            sb.append(URLEncoder.encode(String.valueOf(entry.getValue()), StandardCharsets.UTF_8));
+        }
+        return sb.toString();
+    }
+
+    private static String normalizeBaseUrl(String baseUrl) {
+        String value = baseUrl == null ? "" : baseUrl.trim();
+        if (value.isBlank()) {
+            value = resolveBaseUrl();
+        }
+        if (value.endsWith("/")) {
+            value = value.substring(0, value.length() - 1);
+        }
+        return value;
+    }
+
+    private static String resolveBaseUrl() {
+        String sysProp = System.getProperty("tihu.backend.base-url");
+        if (sysProp != null && !sysProp.isBlank()) {
+            return sysProp.trim();
+        }
+        String env = System.getenv("TIHU_BACKEND_BASE_URL");
+        if (env != null && !env.isBlank()) {
+            return env.trim();
+        }
+        return "http://localhost:9090/api";
     }
 }
 

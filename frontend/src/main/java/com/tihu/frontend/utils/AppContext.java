@@ -1,13 +1,14 @@
 package com.tihu.frontend.utils;
 
 import com.tihu.frontend.service.MockBackendService;
+import com.tihu.frontend.service.RemoteBackendService;
 import com.tihu.frontend.service.MockBackendService.Role;
 import javafx.stage.Stage;
 
 public final class AppContext {
     private static final AppContext INSTANCE = new AppContext();
 
-    private final MockBackendService service = new MockBackendService();
+    private final MockBackendService service = new RemoteBackendService();
     private Stage primaryStage;
     private String username;
     private Role role;
@@ -58,6 +59,7 @@ public final class AppContext {
     }
 
     public void logout() {
+        service.logout();
         username = null;
         role = null;
         selectedBookId = null;
