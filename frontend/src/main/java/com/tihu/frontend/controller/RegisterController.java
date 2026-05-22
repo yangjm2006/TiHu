@@ -21,7 +21,14 @@ public class RegisterController {
     @FXML
     private void onSubmit() {
         try {
-            context.service().registerUser(usernameField.getText(), passwordField.getText());
+            String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
+            String password = passwordField.getText() == null ? "" : passwordField.getText().trim();
+            if (username.isBlank() || password.isBlank()) {
+                messageLabel.setStyle("-fx-text-fill: red;");
+                messageLabel.setText("用户名和密码不能为空");
+                return;
+            }
+            context.service().registerUser(username, password);
             messageLabel.setStyle("-fx-text-fill: green;");
             messageLabel.setText("注册成功，请返回登录");
         } catch (Exception ex) {

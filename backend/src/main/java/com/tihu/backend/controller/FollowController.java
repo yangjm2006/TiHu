@@ -2,6 +2,7 @@ package com.tihu.backend.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.service.FollowService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,7 @@ public class FollowController {
     public Result getFollowees(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Long userId = Long.parseLong(StpUtil.getLoginId().toString());
         Page<Object> result = followService.getFollowees(userId, page, size);
-        return Result.success(result);
+        return Result.success(PageData.of(result));
     }
 
     /**
@@ -58,7 +59,7 @@ public class FollowController {
     public Result getFollowers(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Long userId = Long.parseLong(StpUtil.getLoginId().toString());
         Page<Object> result = followService.getFollowers(userId, page, size);
-        return Result.success(result);
+        return Result.success(PageData.of(result));
     }
 
     /**
@@ -68,7 +69,7 @@ public class FollowController {
     @GetMapping("/user/{userId}/followees")
     public Result getUserFollowees(@PathVariable Long userId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<Object> result = followService.getFollowees(userId, page, size);
-        return Result.success(result);
+        return Result.success(PageData.of(result));
     }
 
     /**
@@ -78,7 +79,7 @@ public class FollowController {
     @GetMapping("/user/{userId}/followers")
     public Result getUserFollowers(@PathVariable Long userId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<Object> result = followService.getFollowers(userId, page, size);
-        return Result.success(result);
+        return Result.success(PageData.of(result));
     }
 
     /**

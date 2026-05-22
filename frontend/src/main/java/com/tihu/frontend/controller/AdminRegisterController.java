@@ -22,7 +22,15 @@ public class AdminRegisterController {
     @FXML
     private void onSubmit() {
         try {
-            context.service().registerAdmin(usernameField.getText(), passwordField.getText(), inviteCodeField.getText());
+            String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
+            String password = passwordField.getText() == null ? "" : passwordField.getText().trim();
+            String inviteCode = inviteCodeField.getText() == null ? "" : inviteCodeField.getText().trim();
+            if (username.isBlank() || password.isBlank() || inviteCode.isBlank()) {
+                messageLabel.setStyle("-fx-text-fill: red;");
+                messageLabel.setText("用户名、密码和邀请码不能为空");
+                return;
+            }
+            context.service().registerAdmin(username, password, inviteCode);
             messageLabel.setStyle("-fx-text-fill: green;");
             messageLabel.setText("管理员注册成功，请返回登录");
         } catch (Exception ex) {

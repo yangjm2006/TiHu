@@ -71,14 +71,15 @@ public class ApiClient {
         attachCookie(builder);
 
         switch (method.toUpperCase()) {
-            case "POST" -> builder.header("Content-Type", "application/json")
+            case "POST" -> builder.header("Content-Type", "application/json; charset=UTF-8")
                     .POST(HttpRequest.BodyPublishers.ofString(body == null ? "{}" : body));
-            case "PUT" -> builder.header("Content-Type", "application/json")
+            case "PUT" -> builder.header("Content-Type", "application/json; charset=UTF-8")
                     .PUT(HttpRequest.BodyPublishers.ofString(body == null ? "{}" : body));
             case "DELETE" -> {
                 if (body == null) {
                     builder.DELETE();
                 } else {
+                    builder.header("Content-Type", "application/json; charset=UTF-8");
                     builder.method("DELETE", HttpRequest.BodyPublishers.ofString(body));
                 }
             }

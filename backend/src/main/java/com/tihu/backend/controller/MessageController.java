@@ -2,6 +2,7 @@ package com.tihu.backend.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.Message;
 import com.tihu.backend.service.MessageService;
@@ -37,7 +38,7 @@ public class MessageController {
     public Result getConversation(@PathVariable Long userId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Long currentUserId = Long.parseLong(StpUtil.getLoginId().toString());
         Page<Message> messages = messageService.getConversation(currentUserId, userId, page, size);
-        return Result.success(messages);
+        return Result.success(PageData.of(messages));
     }
 
     /**

@@ -27,5 +27,10 @@ public interface CommentService extends IService<Comment> {
      * 删除评论（管理员）
      */
     void deleteComment(Long commentId) throws Exception;
+
+    /**
+     * 获取全站所有评论（管理员）
+     */
+    Object getAllComments() throws Exception;
 }
 

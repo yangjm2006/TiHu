@@ -34,15 +34,17 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
     @Override
     public Page<Object> getComments(Long bookId, int pageNum, int pageSize) {
-        // 查询一级评论及其回复
+        // 查询一级评论，按时间倒序分页返回真实数据
         Page<Comment> page = this.page(new Page<>(pageNum, pageSize),
             new LambdaQueryWrapper<Comment>()
                 .eq(Comment::getBookId, bookId)
                 .isNull(Comment::getParentCommentId)
                 .eq(Comment::getIsDeleted, 0)
                 .orderByDesc(Comment::getCreateTime));
-        
-        return new Page<>(pageNum, pageSize);
+
+        Page<Object> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        result.setRecords(page.getRecords().stream().map(item -> (Object) item).toList());
+        return result;
     }
 
     @Override
@@ -68,6 +70,18 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         
         comment.setIsDeleted(1);
         this.updateById(comment);
+    }
+
+    /**
+     * 获取全站所有评论（管理员）
+     */
+    @Override
+    public Object getAllComments() throws Exception {
+        LambdaQueryWrapper<Comment> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Comment::getIsDeleted, 0)
+               .orderByDesc(Comment::getCreateTime);
+
+        return this.list(wrapper);
     }
 }
 

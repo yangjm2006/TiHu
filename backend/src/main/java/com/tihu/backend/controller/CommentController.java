@@ -2,6 +2,7 @@ package com.tihu.backend.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.Comment;
 import com.tihu.backend.service.CommentService;
@@ -40,7 +41,7 @@ public class CommentController {
     @GetMapping("/book/{bookId}")
     public Result getComments(@PathVariable Long bookId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<Object> comments = commentService.getComments(bookId, page, size);
-        return Result.success(comments);
+        return Result.success(PageData.of(comments));
     }
 
     /**
@@ -88,13 +89,23 @@ public class CommentController {
     }
 
     /**
-     * 管理员接口：删除评论
+     * 管理员接口：删除任意评论/回复
      * DELETE /api/comments/admin/{id}
      */
     @DeleteMapping("/admin/{id}")
     public Result deleteComment(@PathVariable Long id) throws Exception {
         commentService.deleteComment(id);
         return Result.success();
+    }
+
+    /**
+     * 管理员接口：查看全站评论
+     * GET /api/comments/admin/all
+     */
+    @GetMapping("/admin/all")
+    public Result getAllComments() throws Exception {
+        Object comments = commentService.getAllComments();
+        return Result.success(comments);
     }
 }
 

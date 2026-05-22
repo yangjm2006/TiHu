@@ -95,6 +95,10 @@ public class MockBackendService {
         // 远程实现可覆盖该方法以清理 token / 会话信息
     }
 
+    public String token() {
+        return null;
+    }
+
     public synchronized Role login(String username, String password) {
         UserEntity user = users.get(username);
         if (user == null || !Objects.equals(user.password, password)) {

@@ -2,10 +2,14 @@ spring:
   application:
     name: tihu-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/tihu?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/tihu?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
   data:
     redis:
       database: 1
@@ -23,7 +27,7 @@ spring:
 server:
   port: 9090
   servlet:
-    context-path: /api
+    context-path: /
 
 # MyBatis-Plus配置
 mybatis-plus:

@@ -13,7 +13,7 @@ public class Result implements Serializable {
     //  状态码
     private int code;
     //  提示信息message
-    private String msg;
+    private String message;
     //  返回的属性类型
     private Object data;
 
@@ -25,10 +25,10 @@ public class Result implements Serializable {
      * @param data
      * @return
      */
-    public static Result success(int code, String msg, Object data) {
+    public static Result success(int code, String message, Object data) {
         Result result = new Result();
         result.setCode(code);
-        result.setMsg(msg);
+        result.setMessage(message);
         result.setData(data);
         return result;
     }
@@ -60,10 +60,10 @@ public class Result implements Serializable {
      * @param data
      * @return
      */
-    public static Result error(int code, String msg, Object data) {
+    public static Result error(int code, String message, Object data) {
         Result result = new Result();
         result.setCode(code);
-        result.setMsg(msg);
+        result.setMessage(message);
         result.setData(data);
         return result;
     }

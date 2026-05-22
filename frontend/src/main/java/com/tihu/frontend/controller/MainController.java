@@ -25,7 +25,7 @@ public class MainController {
 
     @FXML
     public void initialize() {
-        userLabel.setText("用户：" + context.username() + "（" + context.role() + "）");
+        refreshUserInfo();
         boolean isAdmin = context.isAdmin();
         adminLabel.setVisible(isAdmin);
         adminLabel.setManaged(isAdmin);
@@ -123,6 +123,11 @@ public class MainController {
 
     private void showHome() {
         loadContent("home-view.fxml");
+    }
+
+    public void refreshUserInfo() {
+        String roleText = context.role() == null ? "未知角色" : context.role().name();
+        userLabel.setText("当前用户：" + context.username() + " ｜ 角色：" + roleText);
     }
 
     private void showPlaceholder(String title) {

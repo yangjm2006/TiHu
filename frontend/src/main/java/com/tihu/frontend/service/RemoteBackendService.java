@@ -47,6 +47,11 @@ public class RemoteBackendService extends MockBackendService {
     }
 
     @Override
+    public String token() {
+        return apiClient.token();
+    }
+
+    @Override
     public synchronized Role login(String username, String password) {
         return remoteOrFallback(() -> {
             JsonNode data = requestData("POST", "/users/login", json(Map.of("username", username, "password", password)));
@@ -61,9 +66,9 @@ public class RemoteBackendService extends MockBackendService {
             }
 
             currentUserId = longValue(userInfo, "id", null);
-            currentUsername = text(userInfo, "username");
+            currentUsername = text(firstPresent(userInfo, "username"));
             currentPassword = password;
-            currentRole = parseRole(text(userInfo, "role"));
+            currentRole = parseRole(text(firstPresent(userInfo, "role")));
             if (currentRole == null) {
                 currentRole = Role.USER;
             }
@@ -326,7 +331,7 @@ public class RemoteBackendService extends MockBackendService {
     public synchronized UserBookList createBookList(String username, String title, String intro) {
         return remoteOrFallback(() -> {
             JsonNode data = requestData("POST", "/book-lists" + query(mapOf("title", title, "description", intro)), null);
-            UserBookList list = parseBookListDetail(firstPresent(data, "data", "bookList", "book_list"), title, username);
+            UserBookList list = parseBookListDetail(firstPresent(data, "data", "bookList", "book_list"), username);
             if (list == null) {
                 long id = longValue(firstPresent(data, "id"), System.currentTimeMillis());
                 list = new UserBookList(id, username, title == null ? "" : title.trim(), intro == null ? "" : intro.trim(), new ArrayList<>());
@@ -592,8 +597,17 @@ public class RemoteBackendService extends MockBackendService {
     @Override
     public synchronized Book getBook(int id) {
         return remoteOrFallback(() -> {
-            BookDetail detail = getBookDetail(id, currentUsername == null ? "" : currentUsername);
-            return detail.book();
+            // Avoid calling getBookDetail() here because MockBackendService.getBookDetail()
+            // calls getBook(), which is overridden — that can produce an infinite
+            // recursion when remote requests fail and fall back to super implementations.
+            // Instead, fetch the minimal book info directly from the remote API.
+            JsonNode data = requestData("GET", "/books/" + id, null);
+            Book book = parseBook(firstPresent(data, "bookInfo", "book", "data"), id);
+            if (book == null) {
+                // If remote response doesn't contain book info, fall back to super
+                return super.getBook(id);
+            }
+            return book;
         }, () -> super.getBook(id));
     }
 

@@ -12,6 +12,7 @@ public final class AppContext {
     private Stage primaryStage;
     private String username;
     private Role role;
+    private String authToken;
     private Integer selectedBookId;
     private Long selectedBookListId;
     private String selectedBookListOwner;
@@ -45,6 +46,10 @@ public final class AppContext {
         return role;
     }
 
+    public String authToken() {
+        return authToken;
+    }
+
     public boolean isLoggedIn() {
         return username != null;
     }
@@ -56,12 +61,14 @@ public final class AppContext {
     public void login(String username, Role role) {
         this.username = username;
         this.role = role;
+        this.authToken = service.token();
     }
 
     public void logout() {
         service.logout();
         username = null;
         role = null;
+        authToken = null;
         selectedBookId = null;
         selectedBookListId = null;
         selectedBookListOwner = null;

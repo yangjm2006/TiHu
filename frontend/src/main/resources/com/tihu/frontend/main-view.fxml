@@ -14,7 +14,7 @@
             <TextField fx:id="searchField" promptText="搜索书名" prefWidth="220"/>
             <Button text="搜索" onAction="#onSearch"/>
             <Label fx:id="userLabel" style="-fx-font-weight: bold;"/>
-            <Button text="登出" onAction="#onLogout"/>
+            <Button text="退出登录" onAction="#onLogout"/>
         </HBox>
     </top>
 

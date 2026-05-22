@@ -41,4 +41,14 @@ public interface UserService extends IService<User> {
      * 解封用户
      */
     void unbanUser(Long userId);
+
+    /**
+     * 获取用户主页信息（包含评论、书单、关注等）
+     */
+    Object getUserProfile(String username);
+
+    /**
+     * 获取管理员封禁列表
+     */
+    Object getBanList();
 }

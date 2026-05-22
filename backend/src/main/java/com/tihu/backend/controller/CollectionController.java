@@ -2,6 +2,7 @@ package com.tihu.backend.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.service.CollectionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,7 @@ public class CollectionController {
     public Result getMyCollections(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Long userId = Long.parseLong(StpUtil.getLoginId().toString());
         Page<Object> collections = collectionService.getUserCollections(userId, page, size);
-        return Result.success(collections);
+        return Result.success(PageData.of(collections));
     }
 
     /**

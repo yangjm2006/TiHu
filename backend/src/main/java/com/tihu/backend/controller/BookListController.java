@@ -2,6 +2,7 @@ package com.tihu.backend.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.BookList;
 import com.tihu.backend.service.BookListService;
@@ -37,7 +38,7 @@ public class BookListController {
     public Result getMyBookLists(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Long userId = Long.parseLong(StpUtil.getLoginId().toString());
         Page<BookList> result = bookListService.getUserBookLists(userId, page, size);
-        return Result.success(result);
+        return Result.success(PageData.of(result));
     }
 
     /**

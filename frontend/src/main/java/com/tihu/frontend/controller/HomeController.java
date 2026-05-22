@@ -12,7 +12,8 @@ public class HomeController implements MainContentController {
 
     @Override
     public void onShow() {
-        welcomeLabel.setText("欢迎回来，" + context.username() + "。请从左侧进入各模块。");
+        String roleText = context.role() == null ? "" : "（" + context.role().name() + "）";
+        welcomeLabel.setText("欢迎回来，" + context.username() + roleText + "。请从左侧进入各模块。");
     }
 }
 

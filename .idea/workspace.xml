@@ -5,15 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ee7fe98c-96d1-435c-9305-9f69070f3457" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/service/RemoteBackendService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/TiHu.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/TiHu.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/HomeController.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/HomeController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/LoginController.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/LoginController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/request/ApiClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/request/ApiClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/MainController.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/MainController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/ProfileEditController.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/controller/ProfileEditController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/service/MockBackendService.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/service/MockBackendService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/service/RemoteBackendService.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/service/RemoteBackendService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/utils/AppContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/com/tihu/frontend/utils/AppContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/main/java/module-info.java" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/java/module-info.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/resources/com/tihu/frontend/main-view.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/resources/com/tihu/frontend/main-view.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main/resources/com/tihu/frontend/profile-edit-view.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main/resources/com/tihu/frontend/profile-edit-view.fxml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,24 +47,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "git-widget-placeholder": "master",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/19673/Desktop/TiHu",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.github.copilot.settings.customization.CustomizationConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/19673/Desktop/TiHu&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;库&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.github.copilot.settings.customization.CustomizationConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -81,6 +87,8 @@
       <workItem from="1779262373048" duration="63000" />
       <workItem from="1779347361986" duration="532000" />
       <workItem from="1779347931977" duration="2604000" />
+      <workItem from="1779414318908" duration="1406000" />
+      <workItem from="1779415761589" duration="374000" />
     </task>
     <servers />
   </component>

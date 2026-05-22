@@ -6,10 +6,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tihu.backend.common.ApiException;
 import com.tihu.backend.common.Constants;
+import com.tihu.backend.entity.BookList;
+import com.tihu.backend.entity.Comment;
 import com.tihu.backend.entity.User;
 import com.tihu.backend.mapper.UserMapper;
 import com.tihu.backend.service.UserService;
+import com.tihu.backend.service.BookListService;
+import com.tihu.backend.service.CommentService;
+import com.tihu.backend.service.FollowService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.regex.Pattern;
@@ -22,13 +29,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[0-9])(?=.*[a-zA-Z])[a-zA-Z0-9]{6,12}$");
 
+    @Autowired(required = false)
+    private CommentService commentService;
+
+    @Autowired(required = false)
+    private BookListService bookListService;
+
+    @Autowired(required = false)
+    private FollowService followService;
+
     /**
      * 用户注册
      */
     @Override
     public User register(String username, String password, String inviteCode) throws Exception {
         // 验证用户名
-        if (username == null || username.length() < Constants.USERNAME_MIN_LENGTH || username.length() > Constants.USERNAME_MAX_LENGTH) {
+        if (!StringUtils.hasText(username)) {
+            throw new ApiException(400, "用户名不能为空");
+        }
+        username = username.trim();
+        if (username.length() < Constants.USERNAME_MIN_LENGTH || username.length() > Constants.USERNAME_MAX_LENGTH) {
             throw new ApiException(400, "用户名长度必须在2-10之间");
         }
         
@@ -39,6 +59,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         
         // 验证密码
+        if (!StringUtils.hasText(password)) {
+            throw new ApiException(400, "密码不能为空");
+        }
+        password = password.trim();
         if (!PASSWORD_PATTERN.matcher(password).matches()) {
             throw new ApiException(400, "密码必须为6-12位，包含数字和英文字符");
         }
@@ -66,6 +90,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public User login(String username, String password) throws Exception {
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+            throw new ApiException(400, "用户名或密码不能为空");
+        }
+        username = username.trim();
+        password = password.trim();
+
         User user = this.getUserByUsername(username);
         if (user == null) {
             throw new ApiException(401, "用户名或密码错误");
@@ -111,7 +141,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             throw new ApiException(404, "用户不存在");
         }
-        
+
+        if (!StringUtils.hasText(oldPassword) || !StringUtils.hasText(newPassword)) {
+            throw new ApiException(400, "旧密码和新密码不能为空");
+        }
+        oldPassword = oldPassword.trim();
+        newPassword = newPassword.trim();
+
         // 验证旧密码
         if (!BCrypt.checkpw(oldPassword, user.getPassword())) {
             throw new ApiException(401, "旧密码错误");
@@ -131,7 +167,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public void updateUsername(Long userId, String newUsername) throws Exception {
-        if (newUsername == null || newUsername.length() < Constants.USERNAME_MIN_LENGTH || newUsername.length() > Constants.USERNAME_MAX_LENGTH) {
+        if (!StringUtils.hasText(newUsername)) {
+            throw new ApiException(400, "用户名不能为空");
+        }
+        newUsername = newUsername.trim();
+        if (newUsername.length() < Constants.USERNAME_MIN_LENGTH || newUsername.length() > Constants.USERNAME_MAX_LENGTH) {
             throw new ApiException(400, "用户名长度必须在2-10之间");
         }
         
@@ -177,6 +217,87 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setStatus(0);
         user.setBanExpireTime(null);
         this.updateById(user);
+    }
+
+    /**
+     * 获取用户主页信息（包含评论、书单、关注等）
+     */
+    @Override
+    public Object getUserProfile(String username) {
+        User user = this.getUserByUsername(username);
+        if (user == null) {
+            return null;
+        }
+
+        // 构建返回对象
+        java.util.Map<String, Object> profile = new java.util.HashMap<>();
+        profile.put("userInfo", user);
+
+        // 获取该用户的评论列表（时间倒序）
+        java.util.List<?> comments = new java.util.ArrayList<>();
+        if (commentService != null) {
+            try {
+                // 获取用户评论
+                LambdaQueryWrapper<Comment> commentQueryWrapper = new LambdaQueryWrapper<>();
+                commentQueryWrapper.eq(Comment::getUserId, user.getId())
+                        .eq(Comment::getIsDeleted, 0)
+                        .orderByDesc(Comment::getCreateTime);
+                comments = commentService.list(commentQueryWrapper);
+            } catch (Exception e) {
+                // 忽略异常，使用空列表
+            }
+        }
+        profile.put("comments", comments);
+
+        // 获取该用户的公开书单列表
+        java.util.List<?> bookLists = new java.util.ArrayList<>();
+        if (bookListService != null) {
+            try {
+                LambdaQueryWrapper<BookList> bookListQueryWrapper = new LambdaQueryWrapper<>();
+                bookListQueryWrapper.eq(BookList::getUserId, user.getId());
+                bookLists = bookListService.list(bookListQueryWrapper);
+            } catch (Exception e) {
+                // 忽略异常，使用空列表
+            }
+        }
+        profile.put("bookLists", bookLists);
+
+        // 获取关注数和粉丝数
+        long followingCount = 0L;
+        long followerCount = 0L;
+        if (followService != null) {
+            followingCount = followService.getFolloweeCount(user.getId());
+            followerCount = followService.getFollowerCount(user.getId());
+        }
+        profile.put("followingCount", followingCount);
+        profile.put("followerCount", followerCount);
+
+        // 检查当前登录用户是否已关注
+        boolean followedByCurrentUser = false;
+        try {
+            Long currentUserId = Long.parseLong(StpUtil.getLoginId().toString());
+            if (followService != null && !currentUserId.equals(user.getId())) {
+                followedByCurrentUser = followService.isFollowing(currentUserId, user.getId());
+            }
+        } catch (Exception e) {
+            // 未登录，默认false
+        }
+        profile.put("followedByCurrentUser", followedByCurrentUser);
+
+        return profile;
+    }
+
+    /**
+     * 获取管理员封禁列表
+     */
+    @Override
+    public Object getBanList() {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getStatus, 1)
+               .eq(User::getIsDeleted, 0)
+               .isNotNull(User::getBanExpireTime);
+
+        return this.list(wrapper);
     }
 }
 

@@ -1,6 +1,7 @@
 package com.tihu.backend.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.Book;
 import com.tihu.backend.service.BookService;
@@ -26,7 +27,7 @@ public class BookController {
     @GetMapping
     public Result getBooks(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<Book> result = bookService.getBooks(page, size);
-        return Result.success(result);
+        return Result.success(PageData.of(result));
     }
 
     /**
@@ -36,7 +37,7 @@ public class BookController {
     @GetMapping("/search")
     public Result searchByTitle(@RequestParam String keyword, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<Book> result = bookService.searchByTitle(keyword, page, size);
-        return Result.success(result);
+        return Result.success(PageData.of(result));
     }
 
     /**
@@ -46,7 +47,7 @@ public class BookController {
     @GetMapping("/search-by-tags")
     public Result searchByTags(@RequestParam List<String> tags, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Page<Book> result = bookService.searchByTags(tags, page, size);
-        return Result.success(result);
+        return Result.success(PageData.of(result));
     }
 
     /**

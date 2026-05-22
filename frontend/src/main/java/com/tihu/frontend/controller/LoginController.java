@@ -5,7 +5,6 @@ import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -52,7 +51,10 @@ public class LoginController {
 
         loginTask.setOnFailed(event -> {
             Throwable ex = loginTask.getException();
-            messageLabel.setText(ex == null ? "登录失败" : ex.getMessage());
+            Throwable root = ex == null ? null : (ex.getCause() == null ? ex : ex.getCause());
+            messageLabel.setText(root == null || root.getMessage() == null || root.getMessage().isBlank()
+                    ? "登录失败"
+                    : root.getMessage());
         });
 
         Thread thread = new Thread(loginTask, "tihu-login-thread");
