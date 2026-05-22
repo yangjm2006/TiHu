@@ -1,6 +1,7 @@
 package com.tihu.backend.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tihu.backend.common.ApiException;
 import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.Book;
@@ -66,6 +67,11 @@ public class BookController {
      */
     @PostMapping
     public Result createBook(@RequestBody Book book) {
+        requireTitle(book);
+        normalizeTitle(book);
+        if (bookService.lambdaQuery().eq(Book::getTitle, book.getTitle()).count() > 0) {
+            throw new ApiException(409, "书名已存在");
+        }
         bookService.save(book);
         return Result.success(book);
     }
@@ -77,6 +83,11 @@ public class BookController {
     @PutMapping("/{id}")
     public Result updateBook(@PathVariable Long id, @RequestBody Book book) {
         book.setId(id);
+        requireTitle(book);
+        normalizeTitle(book);
+        if (bookService.lambdaQuery().eq(Book::getTitle, book.getTitle()).ne(Book::getId, id).count() > 0) {
+            throw new ApiException(409, "书名已存在");
+        }
         bookService.updateById(book);
         return Result.success();
     }
@@ -93,6 +104,18 @@ public class BookController {
             bookService.updateById(book);
         }
         return Result.success();
+    }
+
+    private void normalizeTitle(Book book) {
+        if (book != null && book.getTitle() != null) {
+            book.setTitle(book.getTitle().trim());
+        }
+    }
+
+    private void requireTitle(Book book) {
+        if (book == null || book.getTitle() == null || book.getTitle().trim().isEmpty()) {
+            throw new ApiException(400, "书名不能为空");
+        }
     }
 }
 

@@ -23,7 +23,7 @@
         </VBox>
     </left>
     <center>
-        <TableView fx:id="tableView" columnResizePolicy="CONSTRAINED_RESIZE_POLICY">
+        <TableView fx:id="tableView">
             <columns>
                 <TableColumn fx:id="titleColumn" text="书名"/>
                 <TableColumn fx:id="authorColumn" text="作者"/>

@@ -616,26 +616,83 @@ public class RemoteBackendService extends MockBackendService {
         List<BookCard> cards = new ArrayList<>();
         boolean needTags = tags != null && !tags.isEmpty();
         for (JsonNode item : pageRecords(page)) {
-            int bookId = intValue(firstPresent(item, "id"), -1);
-            if (bookId <= 0) {
+            BookCard card = parseBookCard(item, currentUsername == null ? "" : currentUsername);
+            if (card == null) {
                 continue;
             }
 
-            BookDetail detail = getBookDetail(bookId, currentUsername == null ? "" : currentUsername);
-            String title = detail.book().title();
+            String title = card.title();
             if (titleKeyword != null && !titleKeyword.isBlank() && !title.toLowerCase(Locale.ROOT).contains(titleKeyword.trim().toLowerCase(Locale.ROOT))) {
                 continue;
             }
-            if (needTags && !detail.book().tags().isEmpty()) {
-                boolean match = tags.stream().map(s -> s.toLowerCase(Locale.ROOT)).allMatch(tag -> detail.book().tags().stream().map(v -> v.toLowerCase(Locale.ROOT)).collect(Collectors.toSet()).contains(tag));
-                if (!match) {
-                    continue;
+            if (needTags && !card.tagsSummary().isBlank()) {
+                List<String> cardTags = parseStringListFromSummary(card.tagsSummary());
+                if (!cardTags.isEmpty()) {
+                    boolean match = tags.stream()
+                            .map(s -> s.toLowerCase(Locale.ROOT))
+                            .allMatch(tag -> cardTags.stream().map(v -> v.toLowerCase(Locale.ROOT)).collect(Collectors.toSet()).contains(tag));
+                    if (!match) {
+                        continue;
+                    }
                 }
             }
-            cards.add(new BookCard(detail.book().id(), detail.book().title(), detail.book().author(),
-                    String.join(", ", detail.book().tags()), formatAvg(detail.ratingSummary())));
+            cards.add(card);
         }
         return cards;
+    }
+
+    private BookCard parseBookCard(JsonNode item, String currentUser) throws IOException, InterruptedException {
+        if (item == null || item.isMissingNode() || item.isNull()) {
+            return null;
+        }
+
+        JsonNode bookNode = firstPresent(item, "bookInfo", "book", "data");
+        int bookId = intValue(firstPresent(item, "id", "bookId", "book_id"), -1);
+        if (bookId <= 0) {
+            bookId = intValue(firstPresent(bookNode, "id", "bookId", "book_id"), -1);
+        }
+        if (bookId <= 0) {
+            return null;
+        }
+
+        String title = text(firstPresent(item, "title", "bookTitle", "name"));
+        String author = text(firstPresent(item, "author", "bookAuthor"));
+        List<String> tags = parseStringList(firstPresent(item, "tags", "tagNames", "tagList"));
+
+        RatingSummary summary = parseRatingSummary(firstPresent(item, "ratings", "ratingSummary"), bookId, currentUser);
+
+        if (title == null || title.isBlank() || author == null || author.isBlank() || tags.isEmpty() || summary == null) {
+            BookDetail detail = getBookDetail(bookId, currentUser);
+            if (title == null || title.isBlank()) {
+                title = detail.book().title();
+            }
+            if (author == null || author.isBlank()) {
+                author = detail.book().author();
+            }
+            if (tags.isEmpty()) {
+                tags = detail.book().tags();
+            }
+            if (summary == null) {
+                summary = detail.ratingSummary();
+            }
+        }
+
+        return new BookCard(bookId,
+                title == null ? "" : title,
+                author == null ? "" : author,
+                String.join(", ", tags),
+                formatAvg(summary));
+    }
+
+    private List<String> parseStringListFromSummary(String summary) {
+        if (summary == null || summary.isBlank()) {
+            return List.of();
+        }
+        return List.of(summary.split(","))
+                .stream()
+                .map(String::trim)
+                .filter(tag -> !tag.isBlank())
+                .toList();
     }
 
     private boolean isCollected(int bookId) {
