@@ -40,7 +40,10 @@ public class Result implements Serializable {
      * @return
      */
     public static Result success(Object data) {
-        return success(200, "操作成功", data);
+        // Use "OK" to align with frontend expectation (frontend guide uses "OK").
+        // This keeps code-based success detection (code == 200) but avoids
+        // frontend bugs that check message string equality.
+        return success(200, "OK", data);
     }
 
     /**
@@ -49,7 +52,7 @@ public class Result implements Serializable {
      * @return
      */
     public static Result success() {
-        return success(200, "操作成功", null);
+        return success(200, "OK", null);
     }
 
     /**

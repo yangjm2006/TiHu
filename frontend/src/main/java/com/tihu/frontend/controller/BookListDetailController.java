@@ -45,7 +45,7 @@ public class BookListDetailController implements MainContentController {
                 messageLabel.setText("当前仅可查看他人公开书单，不能修改");
                 return;
             }
-            int bookId = Integer.parseInt(bookIdField.getText().trim());
+            long bookId = Long.parseLong(bookIdField.getText().trim());
             context.service().addBookToBookList(context.username(), list.id(), bookId);
             bookIdField.clear();
             refresh();
@@ -66,8 +66,8 @@ public class BookListDetailController implements MainContentController {
                 messageLabel.setText("请先选择图书");
                 return;
             }
-            List<Integer> ids = list.bookIds();
-            int bookId = ids.get(idx);
+            List<Long> ids = list.bookIds();
+            long bookId = ids.get(idx);
             context.service().removeBookFromBookList(context.username(), list.id(), bookId);
             refresh();
         } catch (Exception ex) {

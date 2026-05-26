@@ -103,7 +103,7 @@ public class BookListController implements MainContentController {
     }
 
     private void refresh() {
-        List<String> tags = Arrays.stream(tagsSearchField.getText() == null ? new String[0] : tagsSearchField.getText().split(","))
+        List<String> tags = Arrays.stream(tagsSearchField.getText() == null ? new String[0] : tagsSearchField.getText().trim().split("\\s+"))
                 .map(String::trim)
                 .filter(tag -> !tag.isBlank())
                 .toList();

@@ -5,9 +5,11 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 图书实体
@@ -36,11 +38,16 @@ public class Book {
     private LocalDateTime publishDate;
     
     // 平均评分（如8.5）
+    @JsonProperty("averageScore")
     private Double avgRating;
     
     // 评分人数
     private Integer ratingCount;
-    
+
+    // 前端传入的标签名数组，仅用于请求/响应，不落库到 book 表
+    @TableField(exist = false)
+    private List<String> tags;
+
     // 逻辑删除
     @TableLogic
     private Integer isDeleted;

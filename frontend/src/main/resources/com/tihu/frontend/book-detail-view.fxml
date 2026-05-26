@@ -11,8 +11,9 @@
     <top>
         <VBox spacing="8" style="-fx-padding: 14; -fx-background-color: #f5f5f5;">
             <HBox spacing="10">
-                <Button text="← 返回列表" onAction="#onBackToBooks"/>
+                <Button fx:id="backButton" text="← 返回列表" onAction="#onBackToBooks"/>
                 <Label fx:id="titleLabel" text="图书标题" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+                <Button fx:id="favoriteButton" text="收藏" onAction="#onCollect"/>
             </HBox>
             <Label fx:id="metaLabel" text="作者 / 年份 / 评分 / 分类"/>
         </VBox>
@@ -33,7 +34,6 @@
                 <TextArea fx:id="distributionArea"
                           editable="false"
                           wrapText="true"
-                          prefRowCount="10"
                           promptText="评分分布"/>
 
                 <HBox spacing="10" alignment="CENTER_LEFT">
@@ -62,8 +62,7 @@
 
                 <HBox spacing="10">
                     <Button text="提交评论" onAction="#onSubmitComment"/>
-                    <Button text="收藏" onAction="#onCollect"/>
-                    <Label fx:id="messageLabel" text="" wrapText="true"/>
+                    <Label fx:id="messageLabel" wrapText="true"/>
                 </HBox>
             </VBox>
         </SplitPane>

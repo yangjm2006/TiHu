@@ -1,5 +1,12 @@
 package com.tihu.frontend.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,13 +30,13 @@ public class MockBackendService {
         ADMIN
     }
 
-    public record Book(int id, String title, String author, String intro, List<String> tags) {
+    public record Book(long id, String title, String author, String intro, List<String> tags) {
     }
 
     public record BookListPage(List<BookCard> items, int page, int totalPages, int totalItems) {
     }
 
-    public record BookCard(int id, String title, String author, String tagsSummary, String averageScoreText) {
+    public record BookCard(long id, String title, String author, String tagsSummary, String averageScoreText) {
     }
 
     public record RatingSummary(double average, int count, Map<Integer, Integer> distribution, Integer myScore) {
@@ -41,7 +48,7 @@ public class MockBackendService {
     public record BookDetail(Book book, RatingSummary ratingSummary, List<CommentItem> comments, List<CommentItem> replies) {
     }
 
-    public record UserBookList(long id, String owner, String title, String intro, List<Integer> bookIds) {
+    public record UserBookList(long id, String owner, String title, String intro, List<Long> bookIds) {
     }
 
     public record UserProfile(String username, List<CommentItem> comments, List<UserBookList> bookLists, int followingCount,
@@ -76,19 +83,29 @@ public class MockBackendService {
     private final AtomicInteger bookIdSeq = new AtomicInteger(100);
     private final AtomicLong commentIdSeq = new AtomicLong(1000);
     private final AtomicLong listIdSeq = new AtomicLong(2000);
+    private final ObjectMapper mapper = new ObjectMapper();
+    private final Path stateFile;
 
     private final Map<String, UserEntity> users = new LinkedHashMap<>();
-    private final Map<Integer, Book> books = new LinkedHashMap<>();
-    private final Map<Integer, Map<String, Integer>> ratingMap = new HashMap<>();
-    private final Map<Integer, List<CommentItem>> commentMap = new HashMap<>();
+    private final Map<Long, Book> books = new LinkedHashMap<>();
+    private final Map<Long, Map<String, Integer>> ratingMap = new HashMap<>();
+    private final Map<Long, List<CommentItem>> commentMap = new HashMap<>();
     private final Map<Long, Map<String, Integer>> voteMap = new HashMap<>();
-    private final Map<String, Set<Integer>> favoriteMap = new HashMap<>();
+    private final Map<String, Set<Long>> favoriteMap = new HashMap<>();
     private final Map<String, List<UserBookList>> userBookLists = new HashMap<>();
     private final Map<String, Set<String>> followingMap = new HashMap<>();
     private final Map<String, List<MessageItem>> messageMap = new HashMap<>();
 
     public MockBackendService() {
-        seed();
+        this(resolveStateFile());
+    }
+
+    MockBackendService(Path stateFile) {
+        this.stateFile = stateFile == null ? resolveStateFile() : stateFile.toAbsolutePath().normalize();
+        if (!loadState()) {
+            seed();
+            persistState();
+        }
     }
 
     public void logout() {
@@ -118,6 +135,7 @@ public class MockBackendService {
         favoriteMap.put(username, new HashSet<>());
         userBookLists.put(username, new ArrayList<>());
         followingMap.put(username, new HashSet<>());
+        persistState();
     }
 
     public synchronized void registerAdmin(String username, String password, String inviteCode) {
@@ -131,6 +149,7 @@ public class MockBackendService {
         favoriteMap.put(username, new HashSet<>());
         userBookLists.put(username, new ArrayList<>());
         followingMap.put(username, new HashSet<>());
+        persistState();
     }
 
     public synchronized void updateProfile(String currentUsername, String newUsername, String newPassword) {
@@ -147,6 +166,7 @@ public class MockBackendService {
             validatePassword(newPassword);
             user.password = newPassword;
         }
+        persistState();
     }
 
     public synchronized BookListPage listBooks(String titleKeyword, List<String> tags, int page, int pageSize) {
@@ -166,35 +186,39 @@ public class MockBackendService {
         return new BookListPage(items, safePage, totalPages, total);
     }
 
+    public synchronized BookDetail getBookDetail(long bookId, String currentUser) {
+        return buildBookDetail(bookId, currentUser);
+    }
+
     public synchronized BookDetail getBookDetail(int bookId, String currentUser) {
-        Book book = getBook(bookId);
-        RatingSummary summary = ratingSummary(bookId, currentUser);
+        return buildBookDetail((long) bookId, currentUser);
+    }
 
-        List<CommentItem> allComments = commentMap.getOrDefault(bookId, List.of()).stream()
-                .sorted(Comparator.comparing(CommentItem::time).reversed())
-                .toList();
-
-        List<CommentItem> comments = allComments.stream().filter(item -> item.parentId() == null).toList();
-        List<CommentItem> replies = allComments.stream().filter(item -> item.parentId() != null).toList();
-        return new BookDetail(book, summary, comments, replies);
+    public synchronized void rateBook(long bookId, String username, int score) {
+        rateBookInternal(bookId, username, score);
+        persistState();
     }
 
     public synchronized void rateBook(int bookId, String username, int score) {
-        if (score < 1 || score > 10) {
-            throw new IllegalArgumentException("评分必须在 1~10");
-        }
-        getRequiredUser(username);
-        getBook(bookId);
-        ratingMap.computeIfAbsent(bookId, key -> new HashMap<>()).put(username, score);
+        rateBook((long) bookId, username, score);
+    }
+
+    public synchronized void toggleFavorite(String username, long bookId) {
+        toggleFavoriteInternal(username, bookId);
+        persistState();
     }
 
     public synchronized void toggleFavorite(String username, int bookId) {
+        toggleFavorite(username, (long) bookId);
+    }
+
+    public synchronized boolean isCollected(String username, long bookId) {
         getRequiredUser(username);
-        getBook(bookId);
-        Set<Integer> set = favoriteMap.computeIfAbsent(username, key -> new HashSet<>());
-        if (!set.add(bookId)) {
-            set.remove(bookId);
-        }
+        return favoriteMap.getOrDefault(username, Set.of()).contains(bookId);
+    }
+
+    public synchronized boolean isCollected(String username, int bookId) {
+        return isCollected(username, (long) bookId);
     }
 
     public synchronized List<BookCard> listFavorites(String username) {
@@ -206,54 +230,46 @@ public class MockBackendService {
                 .toList();
     }
 
-    public synchronized CommentItem addComment(int bookId, String username, String content, Long parentCommentId) {
-        getRequiredUser(username);
-        getBook(bookId);
-        if (content == null || content.isBlank()) {
-            throw new IllegalArgumentException("评论不能为空");
-        }
-        if (content.length() > 200) {
-            throw new IllegalArgumentException("评论最多 200 字");
-        }
-        if (parentCommentId != null && !isTopLevelComment(bookId, parentCommentId)) {
-            throw new IllegalArgumentException("只能回复一级评论");
-        }
-        CommentItem item = new CommentItem(commentIdSeq.incrementAndGet(), username, content.trim(), LocalDateTime.now(),
-                parentCommentId, 0, 0);
-        commentMap.computeIfAbsent(bookId, key -> new ArrayList<>()).add(item);
+    public synchronized CommentItem addComment(long bookId, String username, String content, Long parentCommentId) {
+        CommentItem item = addCommentInternal(bookId, username, content, parentCommentId);
+        persistState();
         return item;
     }
 
+    public synchronized CommentItem addComment(int bookId, String username, String content, Long parentCommentId) {
+        return addComment((long) bookId, username, content, parentCommentId);
+    }
+
+    public synchronized void updateBook(long bookId, String title, String author, String intro, String tagsText) {
+        updateBookInternal(bookId, title, author, intro, tagsText);
+        persistState();
+    }
+
     public synchronized void updateBook(int bookId, String title, String author, String intro, String tagsText) {
-        Book old = getBook(bookId);
-        if (title == null || title.isBlank()) {
-            throw new IllegalArgumentException("书名必填");
-        }
-        String normalizedTitle = title.trim();
-        boolean duplicated = books.values().stream()
-                .anyMatch(book -> book.id() != bookId && book.title().equals(normalizedTitle));
-        if (duplicated) {
-            throw new IllegalStateException("书名已存在");
-        }
-        books.put(bookId, new Book(bookId, normalizedTitle, valueOrEmpty(author), valueOrEmpty(intro), parseTags(tagsText)));
+        updateBook((long) bookId, title, author, intro, tagsText);
+    }
+
+    public synchronized void deleteOwnComment(long bookId, long commentId, String username) {
+        deleteOwnCommentInternal(bookId, commentId, username);
+        persistState();
     }
 
     public synchronized void deleteOwnComment(int bookId, long commentId, String username) {
-        List<CommentItem> list = commentMap.getOrDefault(bookId, new ArrayList<>());
-        list.removeIf(item -> item.id() == commentId && item.user().equals(username));
+        deleteOwnComment((long) bookId, commentId, username);
+    }
+
+    public synchronized void adminDeleteComment(long bookId, long commentId) {
+        adminDeleteCommentInternal(bookId, commentId);
+        persistState();
     }
 
     public synchronized void adminDeleteComment(int bookId, long commentId) {
-        List<CommentItem> list = commentMap.getOrDefault(bookId, new ArrayList<>());
-        list.removeIf(item -> item.id() == commentId);
+        adminDeleteComment((long) bookId, commentId);
     }
 
     public synchronized void adminDeleteComment(long commentId) {
-        for (List<CommentItem> list : commentMap.values()) {
-            if (list.removeIf(item -> item.id() == commentId)) {
-                return;
-            }
-        }
+        deleteCommentByIdInternal(commentId);
+        persistState();
     }
 
     public synchronized void voteComment(long commentId, String username, int target) {
@@ -263,8 +279,8 @@ public class MockBackendService {
         getRequiredUser(username);
 
         CommentItem hit = null;
-        int hitBookId = -1;
-        for (Map.Entry<Integer, List<CommentItem>> entry : commentMap.entrySet()) {
+        long hitBookId = -1;
+        for (Map.Entry<Long, List<CommentItem>> entry : commentMap.entrySet()) {
             for (CommentItem item : entry.getValue()) {
                 if (item.id() == commentId) {
                     hit = item;
@@ -304,6 +320,7 @@ public class MockBackendService {
                 break;
             }
         }
+        persistState();
     }
 
     public synchronized List<UserBookList> listBookLists(String username) {
@@ -317,11 +334,13 @@ public class MockBackendService {
         UserBookList list = new UserBookList(listIdSeq.incrementAndGet(), username, title.trim(),
                 intro == null ? "" : intro.trim(), new ArrayList<>());
         userBookLists.computeIfAbsent(username, key -> new ArrayList<>()).add(list);
+        persistState();
         return list;
     }
 
     public synchronized void deleteBookList(String username, long listId) {
         userBookLists.getOrDefault(username, new ArrayList<>()).removeIf(item -> item.id() == listId);
+        persistState();
     }
 
     public synchronized UserBookList getBookList(String owner, long listId) {
@@ -331,17 +350,22 @@ public class MockBackendService {
                 .orElseThrow(() -> new IllegalArgumentException("书单不存在"));
     }
 
+    public synchronized void addBookToBookList(String username, long listId, long bookId) {
+        addBookToBookListInternal(username, Math.toIntExact(listId), Math.toIntExact(bookId));
+        persistState();
+    }
+
     public synchronized void addBookToBookList(String username, long listId, int bookId) {
-        UserBookList item = getBookList(username, listId);
-        if (item.bookIds().contains(bookId)) {
-            throw new IllegalStateException("同一本书不能重复加入书单");
-        }
-        ((ArrayList<Integer>) item.bookIds()).add(bookId);
+        addBookToBookList(username, listId, (long) bookId);
+    }
+
+    public synchronized void removeBookFromBookList(String username, long listId, long bookId) {
+        removeBookFromBookListInternal(username, Math.toIntExact(listId), Math.toIntExact(bookId));
+        persistState();
     }
 
     public synchronized void removeBookFromBookList(String username, long listId, int bookId) {
-        UserBookList item = getBookList(username, listId);
-        item.bookIds().remove(Integer.valueOf(bookId));
+        removeBookFromBookList(username, listId, (long) bookId);
     }
 
     public synchronized void follow(String me, String target) {
@@ -351,10 +375,12 @@ public class MockBackendService {
         getRequiredUser(me);
         getRequiredUser(target);
         followingMap.computeIfAbsent(me, key -> new HashSet<>()).add(target);
+        persistState();
     }
 
     public synchronized void unfollow(String me, String target) {
         followingMap.computeIfAbsent(me, key -> new HashSet<>()).remove(target);
+        persistState();
     }
 
     public synchronized List<FollowItem> listFollowing(String username) {
@@ -393,6 +419,7 @@ public class MockBackendService {
         String key = conversationKey(from, to);
         messageMap.computeIfAbsent(key, k -> new ArrayList<>())
                 .add(new MessageItem(from, to, content.trim(), LocalDateTime.now()));
+        persistState();
     }
 
     public synchronized List<ConversationPreview> listConversations(String username) {
@@ -424,11 +451,13 @@ public class MockBackendService {
     public synchronized void banUser(String username, LocalDateTime until) {
         UserEntity user = getRequiredUser(username);
         user.bannedUntil = until;
+        persistState();
     }
 
     public synchronized void unbanUser(String username) {
         UserEntity user = getRequiredUser(username);
         user.bannedUntil = null;
+        persistState();
     }
 
     public synchronized List<CommentItem> adminListAllComments() {
@@ -447,25 +476,36 @@ public class MockBackendService {
         Book book = new Book(bookIdSeq.incrementAndGet(), title.trim(), valueOrEmpty(author), valueOrEmpty(intro),
                 parseTags(tagsText));
         books.put(book.id(), book);
+        persistState();
         return book;
     }
 
     public synchronized void deleteBook(int bookId) {
-        books.remove(bookId);
+        books.remove((long) bookId);
         ratingMap.remove(bookId);
         commentMap.remove(bookId);
+        favoriteMap.values().forEach(set -> set.remove((long) bookId));
+        userBookLists.values().forEach(lists -> lists.forEach(list -> list.bookIds().remove(Long.valueOf(bookId))));
+        persistState();
+    }
+
+    public synchronized void deleteBook(long bookId) {
+        books.remove(bookId);
+        ratingMap.remove(Math.toIntExact(bookId));
+        commentMap.remove(Math.toIntExact(bookId));
         favoriteMap.values().forEach(set -> set.remove(bookId));
-        userBookLists.values().forEach(lists -> lists.forEach(list -> list.bookIds().remove(Integer.valueOf(bookId))));
+        userBookLists.values().forEach(lists -> lists.forEach(list -> list.bookIds().remove(bookId)));
+        persistState();
     }
 
     private BookCard toCard(Book book) {
         double avg = averageScore(book.id());
         String avgText = avg > 0 ? String.format(Locale.US, "%.1f", avg) : "暂无评分";
-        String tags = String.join(", ", book.tags());
+        String tags = String.join(" ", book.tags());
         return new BookCard(book.id(), book.title(), book.author(), tags, avgText);
     }
 
-    private RatingSummary ratingSummary(int bookId, String username) {
+    private RatingSummary ratingSummary(long bookId, String username) {
         Map<String, Integer> map = ratingMap.getOrDefault(bookId, Map.of());
         Map<Integer, Integer> distribution = new LinkedHashMap<>();
         for (int i = 1; i <= 10; i++) {
@@ -478,12 +518,12 @@ public class MockBackendService {
         return new RatingSummary(avg, map.size(), distribution, myScore);
     }
 
-    private boolean isTopLevelComment(int bookId, long commentId) {
+    private boolean isTopLevelComment(long bookId, long commentId) {
         return commentMap.getOrDefault(bookId, List.of()).stream()
                 .anyMatch(item -> item.id() == commentId && item.parentId() == null);
     }
 
-    private double averageScore(int bookId) {
+    private double averageScore(long bookId) {
         Map<String, Integer> map = ratingMap.getOrDefault(bookId, Map.of());
         if (map.isEmpty()) {
             return 0;
@@ -491,12 +531,114 @@ public class MockBackendService {
         return map.values().stream().mapToInt(Integer::intValue).average().orElse(0);
     }
 
+    public synchronized Book getBook(long id) {
+        return getBookInternal(id);
+    }
+
     public synchronized Book getBook(int id) {
+        return getBookInternal((long) id);
+    }
+
+    private Book getBookInternal(long id) {
         Book book = books.get(id);
         if (book == null) {
             throw new IllegalArgumentException("图书不存在");
         }
         return book;
+    }
+
+    private BookDetail buildBookDetail(long bookId, String currentUser) {
+        Book book = getBookInternal(bookId);
+        RatingSummary summary = ratingSummary(bookId, currentUser);
+
+        List<CommentItem> allComments = commentMap.getOrDefault(bookId, List.of()).stream()
+                .sorted(Comparator.comparing(CommentItem::time).reversed())
+                .toList();
+
+        List<CommentItem> comments = allComments.stream().filter(item -> item.parentId() == null).toList();
+        List<CommentItem> replies = allComments.stream().filter(item -> item.parentId() != null).toList();
+        return new BookDetail(book, summary, comments, replies);
+    }
+
+    private void rateBookInternal(long bookId, String username, int score) {
+        if (score < 1 || score > 10) {
+            throw new IllegalArgumentException("评分必须在 1~10");
+        }
+        getRequiredUser(username);
+        getBookInternal(bookId);
+        ratingMap.computeIfAbsent(bookId, key -> new HashMap<>()).put(username, score);
+    }
+
+    private void toggleFavoriteInternal(String username, long bookId) {
+        getRequiredUser(username);
+        getBookInternal(bookId);
+        Set<Long> set = favoriteMap.computeIfAbsent(username, key -> new HashSet<>());
+        if (!set.add(bookId)) {
+            set.remove(bookId);
+        }
+    }
+
+    private CommentItem addCommentInternal(long bookId, String username, String content, Long parentCommentId) {
+        getRequiredUser(username);
+        getBookInternal(bookId);
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("评论不能为空");
+        }
+        if (content.length() > 200) {
+            throw new IllegalArgumentException("评论最多 200 字");
+        }
+        if (parentCommentId != null && !isTopLevelComment(bookId, parentCommentId)) {
+            throw new IllegalArgumentException("只能回复一级评论");
+        }
+        CommentItem item = new CommentItem(commentIdSeq.incrementAndGet(), username, content.trim(), LocalDateTime.now(),
+                parentCommentId, 0, 0);
+        commentMap.computeIfAbsent(bookId, key -> new ArrayList<>()).add(item);
+        return item;
+    }
+
+    private void updateBookInternal(long bookId, String title, String author, String intro, String tagsText) {
+        getBookInternal(bookId);
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("书名必填");
+        }
+        String normalizedTitle = title.trim();
+        boolean duplicated = books.values().stream()
+                .anyMatch(book -> book.id() != bookId && book.title().equals(normalizedTitle));
+        if (duplicated) {
+            throw new IllegalStateException("书名已存在");
+        }
+        books.put(bookId, new Book(bookId, normalizedTitle, valueOrEmpty(author), valueOrEmpty(intro), parseTags(tagsText)));
+    }
+
+    private void deleteOwnCommentInternal(long bookId, long commentId, String username) {
+        List<CommentItem> list = commentMap.getOrDefault(bookId, new ArrayList<>());
+        list.removeIf(item -> item.id() == commentId && item.user().equals(username));
+    }
+
+    private void adminDeleteCommentInternal(long bookId, long commentId) {
+        List<CommentItem> list = commentMap.getOrDefault(bookId, new ArrayList<>());
+        list.removeIf(item -> item.id() == commentId);
+    }
+
+    private void deleteCommentByIdInternal(long commentId) {
+        for (List<CommentItem> list : commentMap.values()) {
+            if (list.removeIf(item -> item.id() == commentId)) {
+                return;
+            }
+        }
+    }
+
+    private void addBookToBookListInternal(String username, int listId, int bookId) {
+        UserBookList item = getBookList(username, listId);
+        if (item.bookIds().contains((long) bookId)) {
+            throw new IllegalStateException("同一本书不能重复加入书单");
+        }
+        item.bookIds().add((long) bookId);
+    }
+
+    private void removeBookFromBookListInternal(String username, int listId, int bookId) {
+        UserBookList item = getBookList(username, listId);
+        item.bookIds().remove(Long.valueOf(bookId));
     }
 
     private void ensureUserNotExists(String username) {
@@ -549,7 +691,7 @@ public class MockBackendService {
         if (tagsText == null || tagsText.isBlank()) {
             return List.of();
         }
-        return List.of(tagsText.split(",")).stream()
+        return List.of(tagsText.trim().split("\\s+" )).stream()
                 .map(String::trim)
                 .filter(tag -> !tag.isBlank())
                 .distinct()
@@ -594,6 +736,188 @@ public class MockBackendService {
         }).collect(Collectors.toCollection(ArrayList::new)));
     }
 
+    private static Path resolveStateFile() {
+        String configured = System.getProperty("tihu.backend.state-file");
+        if (configured == null || configured.isBlank()) {
+            configured = System.getenv("TIHU_BACKEND_STATE_FILE");
+        }
+        if (configured != null && !configured.isBlank()) {
+            return Paths.get(configured.trim()).toAbsolutePath().normalize();
+        }
+        return Paths.get(System.getProperty("user.home"), ".tihu-frontend", "backend-state.json").toAbsolutePath().normalize();
+    }
+
+    private boolean loadState() {
+        if (!Files.exists(stateFile)) {
+            return false;
+        }
+        try {
+            PersistentState state = mapper.readValue(Files.readString(stateFile), PersistentState.class);
+            applyState(state);
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    private void persistState() {
+        try {
+            Path parent = stateFile.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+            Path tempDir = parent != null ? parent : stateFile.toAbsolutePath().getParent();
+            Path temp = Files.createTempFile(tempDir, "tihu-state-", ".tmp");
+            Files.writeString(temp, mapper.writerWithDefaultPrettyPrinter().writeValueAsString(snapshot()));
+            Files.move(temp, stateFile, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException ex) {
+            throw new IllegalStateException("无法保存后端数据", ex);
+        }
+    }
+
+    private PersistentState snapshot() {
+        return new PersistentState(
+                bookIdSeq.get(),
+                commentIdSeq.get(),
+                listIdSeq.get(),
+                users.values().stream()
+                        .map(user -> new UserSnapshot(user.username, user.password, user.role,
+                                user.bannedUntil == null ? null : user.bannedUntil.toString()))
+                        .toList(),
+                new ArrayList<>(books.values()),
+                ratingMap,
+                commentMap.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().stream()
+                                .map(item -> new CommentSnapshot(item.id(), item.user(), item.content(), item.time().toString(),
+                                        item.parentId(), item.upVotes(), item.downVotes()))
+                                .collect(Collectors.toCollection(ArrayList::new)), (left, right) -> left, LinkedHashMap::new)),
+                voteMap,
+                favoriteMap,
+                userBookLists,
+                followingMap,
+                messageMap.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().stream()
+                                .map(item -> new MessageSnapshot(item.from(), item.to(), item.content(), item.time().toString()))
+                                .collect(Collectors.toCollection(ArrayList::new)), (left, right) -> left, LinkedHashMap::new))
+        );
+    }
+
+    private void applyState(PersistentState state) {
+        users.clear();
+        books.clear();
+        ratingMap.clear();
+        commentMap.clear();
+        voteMap.clear();
+        favoriteMap.clear();
+        userBookLists.clear();
+        followingMap.clear();
+        messageMap.clear();
+
+        if (state == null) {
+            return;
+        }
+
+        bookIdSeq.set(state.bookIdSeq());
+        commentIdSeq.set(state.commentIdSeq());
+        listIdSeq.set(state.listIdSeq());
+
+        if (state.users() != null) {
+            for (UserSnapshot user : state.users()) {
+                UserEntity entity = new UserEntity(user.username(), user.password(), user.role());
+                entity.bannedUntil = parseDateTime(user.bannedUntil());
+                users.put(user.username(), entity);
+            }
+        }
+
+        if (state.books() != null) {
+            for (Book book : state.books()) {
+                books.put(book.id(), new Book(book.id(), book.title(), book.author(), book.intro(), new ArrayList<>(book.tags())));
+            }
+        }
+
+        if (state.ratingMap() != null) {
+            for (Map.Entry<Long, Map<String, Integer>> entry : state.ratingMap().entrySet()) {
+                ratingMap.put(entry.getKey(), new HashMap<>(entry.getValue()));
+            }
+        }
+
+        if (state.commentMap() != null) {
+            for (Map.Entry<Long, List<CommentSnapshot>> entry : state.commentMap().entrySet()) {
+                List<CommentItem> items = new ArrayList<>();
+                for (CommentSnapshot snapshot : entry.getValue()) {
+                    items.add(new CommentItem(snapshot.id(), snapshot.user(), snapshot.content(), parseDateTime(snapshot.time()),
+                            snapshot.parentId(), snapshot.upVotes(), snapshot.downVotes()));
+                }
+                commentMap.put(entry.getKey(), items);
+            }
+        }
+
+        if (state.voteMap() != null) {
+            for (Map.Entry<Long, Map<String, Integer>> entry : state.voteMap().entrySet()) {
+                voteMap.put(entry.getKey(), new HashMap<>(entry.getValue()));
+            }
+        }
+
+        if (state.favoriteMap() != null) {
+            for (Map.Entry<String, Set<Long>> entry : state.favoriteMap().entrySet()) {
+                favoriteMap.put(entry.getKey(), new HashSet<>(entry.getValue()));
+            }
+        }
+
+        if (state.userBookLists() != null) {
+            for (Map.Entry<String, List<UserBookList>> entry : state.userBookLists().entrySet()) {
+                List<UserBookList> lists = new ArrayList<>();
+                for (UserBookList list : entry.getValue()) {
+                    lists.add(new UserBookList(list.id(), list.owner(), list.title(), list.intro(), new ArrayList<>(list.bookIds())));
+                }
+                userBookLists.put(entry.getKey(), lists);
+            }
+        }
+
+        if (state.followingMap() != null) {
+            for (Map.Entry<String, Set<String>> entry : state.followingMap().entrySet()) {
+                followingMap.put(entry.getKey(), new HashSet<>(entry.getValue()));
+            }
+        }
+
+        if (state.messageMap() != null) {
+            for (Map.Entry<String, List<MessageSnapshot>> entry : state.messageMap().entrySet()) {
+                List<MessageItem> messages = new ArrayList<>();
+                for (MessageSnapshot snapshot : entry.getValue()) {
+                    messages.add(new MessageItem(snapshot.from(), snapshot.to(), snapshot.content(), parseDateTime(snapshot.time())));
+                }
+                messageMap.put(entry.getKey(), messages);
+            }
+        }
+
+        for (String username : users.keySet()) {
+            favoriteMap.putIfAbsent(username, new HashSet<>());
+            userBookLists.putIfAbsent(username, new ArrayList<>());
+            followingMap.putIfAbsent(username, new HashSet<>());
+        }
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        return value == null || value.isBlank() ? null : LocalDateTime.parse(value);
+    }
+
+    private record PersistentState(int bookIdSeq, long commentIdSeq, long listIdSeq, List<UserSnapshot> users,
+                                   List<Book> books, Map<Long, Map<String, Integer>> ratingMap,
+                                   Map<Long, List<CommentSnapshot>> commentMap, Map<Long, Map<String, Integer>> voteMap,
+                                   Map<String, Set<Long>> favoriteMap, Map<String, List<UserBookList>> userBookLists,
+                                   Map<String, Set<String>> followingMap, Map<String, List<MessageSnapshot>> messageMap) {
+    }
+
+    private record UserSnapshot(String username, String password, Role role, String bannedUntil) {
+    }
+
+    private record CommentSnapshot(long id, String user, String content, String time, Long parentId, int upVotes,
+                                   int downVotes) {
+    }
+
+    private record MessageSnapshot(String from, String to, String content, String time) {
+    }
+
     private void seed() {
         users.put("admin", new UserEntity("admin", "Admin123", Role.ADMIN));
         users.put("alice", new UserEntity("alice", "Alice123", Role.USER));
@@ -611,35 +935,36 @@ public class MockBackendService {
         followingMap.put("alice", new HashSet<>());
         followingMap.put("bob", new HashSet<>());
 
-        addSeedBook("三体", "刘慈欣", "地球文明与三体文明的接触与冲突。", "科幻, 宇宙");
-        addSeedBook("活着", "余华", "普通人在时代洪流中的生命故事。", "文学, 现实");
-        addSeedBook("解忧杂货店", "东野圭吾", "通过来信连接过去和现在的温暖故事。", "治愈, 小说");
-        addSeedBook("追风筝的人", "卡勒德胡赛尼", "关于成长、背叛与救赎。", "文学, 成长");
-        addSeedBook("白夜行", "东野圭吾", "跨越二十年的罪与罚。", "悬疑, 小说");
-        addSeedBook("嫌疑人X的献身", "东野圭吾", "天才数学家的极致爱情。", "悬疑, 推理");
-        addSeedBook("百年孤独", "加西亚马尔克斯", "布恩迪亚家族七代人的传奇。", "文学, 魔幻现实");
-        addSeedBook("人类简史", "尤瓦尔赫拉利", "从认知革命到现代社会。", "历史, 社科");
-        addSeedBook("原则", "瑞达利欧", "生活与工作的原则总结。", "商业, 成长");
-        addSeedBook("刻意练习", "安德斯艾利克森", "高水平表现背后的方法论。", "成长, 方法");
-        addSeedBook("被讨厌的勇气", "岸见一郎", "阿德勒心理学入门。", "心理, 成长");
+        addSeedBook("三体", "刘慈欣", "地球文明与三体文明的接触与冲突。", "科幻 宇宙");
+        addSeedBook("活着", "余华", "普通人在时代洪流中的生命故事。", "文学 现实");
+        addSeedBook("解忧杂货店", "东野圭吾", "通过来信连接过去和现在的温暖故事。", "治愈 小说");
+        addSeedBook("追风筝的人", "卡勒德胡赛尼", "关于成长、背叛与救赎。", "文学 成长");
+        addSeedBook("白夜行", "东野圭吾", "跨越二十年的罪与罚。", "悬疑 小说");
+        addSeedBook("嫌疑人X的献身", "东野圭吾", "天才数学家的极致爱情。", "悬疑 推理");
+        addSeedBook("百年孤独", "加西亚马尔克斯", "布恩迪亚家族七代人的传奇。", "文学 魔幻现实");
+        addSeedBook("人类简史", "尤瓦尔赫拉利", "从认知革命到现代社会。", "历史 社科");
+        addSeedBook("原则", "瑞达利欧", "生活与工作的原则总结。", "商业 成长");
+        addSeedBook("刻意练习", "安德斯艾利克森", "高水平表现背后的方法论。", "成长 方法");
+        addSeedBook("被讨厌的勇气", "岸见一郎", "阿德勒心理学入门。", "心理 成长");
 
-        rateBook(101, "alice", 10);
-        rateBook(101, "bob", 9);
-        rateBook(102, "alice", 9);
-        rateBook(103, "bob", 8);
+        rateBookInternal(101, "alice", 10);
+        rateBookInternal(101, "bob", 9);
+        rateBookInternal(102, "alice", 9);
+        rateBookInternal(103, "bob", 8);
 
-        addComment(101, "alice", "世界观很震撼。", null);
-        CommentItem top = addComment(101, "bob", "前半部分慢热，后面很精彩。", null);
-        addComment(101, "alice", "同感！", top.id());
+        addCommentInternal(101, "alice", "世界观很震撼。", null);
+        CommentItem top = addCommentInternal(101, "bob", "前半部分慢热，后面很精彩。", null);
+        addCommentInternal(101, "alice", "同感！", top.id());
 
         UserBookList list = createBookList("alice", "科幻入门", "适合刚接触科幻的读者");
-        addBookToBookList("alice", list.id(), 101);
-        addBookToBookList("alice", list.id(), 108);
+        addBookToBookListInternal("alice", Math.toIntExact(list.id()), 101);
+        addBookToBookListInternal("alice", Math.toIntExact(list.id()), 108);
 
         follow("alice", "bob");
 
         sendMessage("alice", "bob", "你好，我想交流下三体。\n");
         sendMessage("bob", "alice", "可以呀，约个时间聊。\n");
+        persistState();
     }
 
     private void addSeedBook(String title, String author, String intro, String tagsText) {
@@ -647,4 +972,3 @@ public class MockBackendService {
         books.put(book.id(), book);
     }
 }
-

@@ -7,7 +7,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.lang.reflect.Array;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -118,18 +120,42 @@ public class ApiClient {
         StringBuilder sb = new StringBuilder("?");
         boolean first = true;
         for (Map.Entry<String, ?> entry : new LinkedHashMap<>(params).entrySet()) {
-            if (entry.getValue() == null) {
-                continue;
-            }
-            if (!first) {
-                sb.append('&');
-            }
-            first = false;
-            sb.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
-            sb.append('=');
-            sb.append(URLEncoder.encode(String.valueOf(entry.getValue()), StandardCharsets.UTF_8));
+            first = appendQueryValue(sb, first, entry.getKey(), entry.getValue());
         }
         return sb.toString();
+    }
+
+    private static boolean appendQueryValue(StringBuilder sb, boolean first, String key, Object value) {
+        if (value == null) {
+            return first;
+        }
+        if (value instanceof Collection<?> collection) {
+            for (Object item : collection) {
+                first = appendSingleQueryValue(sb, first, key, item);
+            }
+            return first;
+        }
+        if (value.getClass().isArray()) {
+            int length = Array.getLength(value);
+            for (int i = 0; i < length; i++) {
+                first = appendSingleQueryValue(sb, first, key, Array.get(value, i));
+            }
+            return first;
+        }
+        return appendSingleQueryValue(sb, first, key, value);
+    }
+
+    private static boolean appendSingleQueryValue(StringBuilder sb, boolean first, String key, Object value) {
+        if (value == null) {
+            return first;
+        }
+        if (!first) {
+            sb.append('&');
+        }
+        sb.append(URLEncoder.encode(key, StandardCharsets.UTF_8));
+        sb.append('=');
+        sb.append(URLEncoder.encode(String.valueOf(value), StandardCharsets.UTF_8));
+        return false;
     }
 
     private static String normalizeBaseUrl(String baseUrl) {

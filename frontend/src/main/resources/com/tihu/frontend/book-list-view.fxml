@@ -12,7 +12,7 @@
             <Label text="图书列表" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
             <HBox spacing="8">
                 <TextField fx:id="titleSearchField" promptText="按书名模糊搜索" prefWidth="220"/>
-                <TextField fx:id="tagsSearchField" promptText="按标签 AND 搜索，例如：科幻, 宇宙" prefWidth="280"/>
+                <TextField fx:id="tagsSearchField" promptText="按标签 AND 搜索，例如：科幻 宇宙" prefWidth="280"/>
                 <Button text="搜索" onAction="#onSearch"/>
                 <Button text="重置" onAction="#onReset"/>
                 <Region HBox.hgrow="ALWAYS"/>

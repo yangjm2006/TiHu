@@ -1,5 +1,6 @@
 package com.tihu.backend.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tihu.backend.common.ApiException;
@@ -58,6 +59,13 @@ public class RatingServiceImpl extends ServiceImpl<RatingMapper, Rating> impleme
         stats.put("avgScore", avgRating);
         stats.put("ratingCount", scores.size());
         stats.put("distribution", distribution);
+        if (StpUtil.isLogin()) {
+            Long userId = Long.parseLong(StpUtil.getLoginId().toString());
+            Rating myRating = this.getOne(new LambdaQueryWrapper<Rating>().eq(Rating::getUserId, userId).eq(Rating::getBookId, bookId));
+            stats.put("myScore", myRating == null ? null : myRating.getScore());
+        } else {
+            stats.put("myScore", null);
+        }
         return stats;
     }
 }

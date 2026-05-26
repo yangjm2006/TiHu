@@ -2,6 +2,7 @@ package com.tihu.frontend.controller;
 
 import com.tihu.frontend.MainApplication;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -67,9 +68,18 @@ public class MainController {
         }
     }
 
-    public void openBookDetail(int bookId) {
+    public void openBookDetail(long bookId) {
+        openBookDetail(bookId, BookDetailReturnTarget.BOOK_LIST);
+    }
+
+    public void openBookDetail(long bookId, BookDetailReturnTarget returnTarget) {
         context.setSelectedBookId(bookId);
+        context.setBookDetailReturnTarget(returnTarget);
         loadContent("book-detail-view.fxml");
+    }
+
+    public void openBookDetail(int bookId) {
+        openBookDetail((long) bookId);
     }
 
     public void openBookListDetail(long listId) {

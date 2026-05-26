@@ -3,16 +3,27 @@ package com.tihu.backend.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.tihu.backend.common.ApiException;
 import com.tihu.backend.entity.Book;
+import com.tihu.backend.entity.BookTag;
+import com.tihu.backend.entity.Tag;
 import com.tihu.backend.mapper.BookMapper;
+import com.tihu.backend.mapper.BookTagMapper;
 import com.tihu.backend.service.BookService;
 import com.tihu.backend.service.RatingService;
-import org.springframework.stereotype.Service;
+import com.tihu.backend.service.TagService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements BookService {
@@ -20,23 +31,152 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
     @Autowired
     private RatingService ratingService;
 
+    @Autowired
+    private TagService tagService;
+
+    @Autowired
+    private BookTagMapper bookTagMapper;
+
+
     @Override
     public Page<Book> getBooks(int pageNum, int pageSize) {
-        return this.page(new Page<>(pageNum, pageSize), 
+        Page<Book> page = this.page(new Page<>(pageNum, pageSize),
             new LambdaQueryWrapper<Book>().eq(Book::getIsDeleted, 0).orderByDesc(Book::getAvgRating));
+        attachTags(page.getRecords());
+        return page;
     }
 
     @Override
     public Page<Book> searchByTitle(String keyword, int pageNum, int pageSize) {
-        return this.page(new Page<>(pageNum, pageSize),
+        Page<Book> page = this.page(new Page<>(pageNum, pageSize),
             new LambdaQueryWrapper<Book>().eq(Book::getIsDeleted, 0).like(Book::getTitle, keyword).orderByDesc(Book::getAvgRating));
+        attachTags(page.getRecords());
+        return page;
     }
 
     @Override
     public Page<Book> searchByTags(List<String> tags, int pageNum, int pageSize) {
-        // 此处需要复杂SQL，实现多标签AND逻辑
-        // 可通过BookTagMapper查询
-        return new Page<>(pageNum, pageSize);
+        int safePageSize = pageSize <= 0 ? 10 : pageSize;
+        List<String> normalizedTags = normalizeTags(tags);
+        Page<Book> page = new Page<>(pageNum, safePageSize);
+        if (normalizedTags.isEmpty()) {
+            page.setRecords(Collections.emptyList());
+            page.setTotal(0);
+            page.setPages(0);
+            page.setCurrent(pageNum);
+            page.setSize(safePageSize);
+            return page;
+        }
+
+        List<Tag> tagList = tagService.list(new LambdaQueryWrapper<Tag>().in(Tag::getName, normalizedTags));
+        if (tagList.size() != normalizedTags.size()) {
+            page.setRecords(Collections.emptyList());
+            page.setTotal(0);
+            page.setPages(0);
+            page.setCurrent(pageNum);
+            page.setSize(safePageSize);
+            return page;
+        }
+
+        List<Long> tagIds = tagList.stream().map(Tag::getId).collect(Collectors.toList());
+        List<BookTag> relations = bookTagMapper.selectList(
+                new LambdaQueryWrapper<BookTag>().in(BookTag::getTagId, tagIds)
+        );
+        if (relations.isEmpty()) {
+            page.setRecords(Collections.emptyList());
+            page.setTotal(0);
+            page.setPages(0);
+            page.setCurrent(pageNum);
+            page.setSize(safePageSize);
+            return page;
+        }
+
+        Map<Long, Set<Long>> bookTagMap = new java.util.HashMap<>();
+        for (BookTag relation : relations) {
+            bookTagMap.computeIfAbsent(relation.getBookId(), k -> new LinkedHashSet<>())
+                    .add(relation.getTagId());
+        }
+
+        List<Long> matchedBookIds = bookTagMap.entrySet().stream()
+                .filter(entry -> entry.getValue().containsAll(tagIds))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        if (matchedBookIds.isEmpty()) {
+            page.setRecords(Collections.emptyList());
+            page.setTotal(0);
+            page.setPages(0);
+            page.setCurrent(pageNum);
+            page.setSize(safePageSize);
+            return page;
+        }
+
+        List<Book> books = this.list(new LambdaQueryWrapper<Book>()
+                .eq(Book::getIsDeleted, 0)
+                .in(Book::getId, matchedBookIds)
+                .orderByDesc(Book::getAvgRating));
+
+        attachTags(books);
+
+        int total = books.size();
+        int fromIndex = Math.max(0, (pageNum - 1) * safePageSize);
+        int toIndex = Math.min(fromIndex + safePageSize, total);
+        List<Book> records = fromIndex >= total ? Collections.emptyList() : books.subList(fromIndex, toIndex);
+
+        page.setRecords(records);
+        page.setTotal(total);
+        page.setPages((total + safePageSize - 1L) / safePageSize);
+        page.setCurrent(pageNum);
+        page.setSize(safePageSize);
+        return page;
+    }
+
+    @Override
+    public List<Tag> getBookTags(Long bookId) {
+        Book book = this.getById(bookId);
+        if (book == null || book.getIsDeleted() == 1) {
+            throw new ApiException(404, "图书不存在");
+        }
+
+        List<BookTag> relations = bookTagMapper.selectList(
+                new LambdaQueryWrapper<BookTag>().eq(BookTag::getBookId, bookId)
+        );
+        if (relations.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> tagIds = relations.stream().map(BookTag::getTagId).collect(Collectors.toList());
+        return tagService.listByIds(tagIds);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void replaceBookTags(Long bookId, List<String> tagNames) {
+        Book book = this.getById(bookId);
+        if (book == null || book.getIsDeleted() == 1) {
+            throw new ApiException(404, "图书不存在");
+        }
+
+        bookTagMapper.delete(new LambdaQueryWrapper<BookTag>().eq(BookTag::getBookId, bookId));
+
+        List<String> normalizedTags = normalizeTags(tagNames);
+        if (normalizedTags.isEmpty()) {
+            return;
+        }
+
+        for (String tagName : normalizedTags) {
+            Tag tag = tagService.lambdaQuery().eq(Tag::getName, tagName).one();
+            if (tag == null) {
+                tag = new Tag();
+                tag.setName(tagName);
+                tagService.save(tag);
+            }
+
+            BookTag relation = new BookTag();
+            relation.setBookId(bookId);
+            relation.setTagId(tag.getId());
+            bookTagMapper.insert(relation);
+        }
     }
 
     @Override
@@ -45,13 +185,84 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
         if (book == null || book.getIsDeleted() == 1) {
             return null;
         }
+        attachTags(Collections.singletonList(book));
+
         // 返回包含评分统计的详情对象
         Object ratingStats = ratingService.getRatingStats(bookId);
 
         Map<String, Object> detail = new HashMap<>();
         detail.put("bookInfo", book);
         detail.put("ratings", ratingStats);
+        detail.put("tags", book.getTags());
         return detail;
+    }
+
+    private void attachTags(List<Book> books) {
+        if (books == null || books.isEmpty()) {
+            return;
+        }
+
+        List<Long> bookIds = books.stream()
+                .map(Book::getId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+        if (bookIds.isEmpty()) {
+            for (Book book : books) {
+                book.setTags(Collections.emptyList());
+            }
+            return;
+        }
+
+        List<BookTag> relations = bookTagMapper.selectList(
+                new LambdaQueryWrapper<BookTag>().in(BookTag::getBookId, bookIds)
+        );
+        if (relations.isEmpty()) {
+            for (Book book : books) {
+                book.setTags(Collections.emptyList());
+            }
+            return;
+        }
+
+        List<Long> tagIds = relations.stream()
+                .map(BookTag::getTagId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> tagNameMap = tagService.listByIds(tagIds).stream()
+                .collect(Collectors.toMap(Tag::getId, Tag::getName));
+
+        Map<Long, List<String>> bookTagMap = new HashMap<>();
+        for (BookTag relation : relations) {
+            String tagName = tagNameMap.get(relation.getTagId());
+            if (tagName == null) {
+                continue;
+            }
+            bookTagMap.computeIfAbsent(relation.getBookId(), k -> new ArrayList<>()).add(tagName);
+        }
+
+        for (Book book : books) {
+            book.setTags(bookTagMap.getOrDefault(book.getId(), Collections.emptyList()));
+        }
+    }
+
+    private List<String> normalizeTags(List<String> tags) {
+        if (tags == null || tags.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String tag : tags) {
+            if (tag == null) {
+                continue;
+            }
+            String[] parts = tag.split("[,，]");
+            for (String part : parts) {
+                String value = part.trim();
+                if (!value.isEmpty()) {
+                    normalized.add(value);
+                }
+            }
+        }
+        return new ArrayList<>(normalized);
     }
 }
 

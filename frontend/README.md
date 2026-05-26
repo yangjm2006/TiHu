@@ -116,6 +116,11 @@ frontend/
 - **构建工具**：Maven 3.8.5+
 - **IDE 推荐**：IntelliJ IDEA（已配置 JavaFX 支持）
 
+### 远程接口配置
+- 默认后端地址：`http://localhost:9090/api`
+- 可通过环境变量 `TIHU_BACKEND_BASE_URL` 或系统属性 `tihu.backend.base-url` 覆盖
+- 当前前端会优先走远程 API；远程不可用时会回退到本地 mock 数据，便于离线演示
+
 ### 清理与重新编译
 ```bash
 mvn clean compile
@@ -130,8 +135,8 @@ mvn javafx:run -X
 
 ## 🐛 已知事项
 
-1. **内存存储** - 重启后数据重置（这是 mock 后端的预期行为）
-2. **没有网络请求** - 所有数据在本地 MockBackendService 中处理
+1. **远程优先** - 登录、注册、图书、评论、收藏、书单、关注、私信等操作优先调用远程 API
+2. **离线回退** - 如果远程接口不可用，前端会回退到本地 mock 逻辑，避免页面完全不可用
 3. **UI 未美化** - JavaFX 默认主题，后期可添加 CSS
 4. **头像统一** - V1 不支持头像上传，全站使用默认头像
 

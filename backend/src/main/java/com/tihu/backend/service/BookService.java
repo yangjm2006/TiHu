@@ -3,6 +3,7 @@ package com.tihu.backend.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.tihu.backend.entity.Book;
+import com.tihu.backend.entity.Tag;
 
 import java.util.List;
 
@@ -24,7 +25,17 @@ public interface BookService extends IService<Book> {
      * 按标签搜索（多标签AND）
      */
     Page<Book> searchByTags(List<String> tags, int pageNum, int pageSize);
-    
+
+    /**
+     * 获取图书标签
+     */
+    List<Tag> getBookTags(Long bookId);
+
+    /**
+     * 替换图书标签（按标签名保存）
+     */
+    void replaceBookTags(Long bookId, List<String> tagNames);
+
     /**
      * 获取图书详情（含评分统计）
      */

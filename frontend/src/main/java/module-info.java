@@ -11,7 +11,7 @@ module com.tihu.frontend {
     opens com.tihu.frontend.controller to javafx.fxml;
     exports com.tihu.frontend.controller;
 
-    opens com.tihu.frontend.service to javafx.fxml;
+    opens com.tihu.frontend.service to javafx.fxml, com.fasterxml.jackson.databind;
     exports com.tihu.frontend.service;
 
     opens com.tihu.frontend.utils to javafx.fxml;

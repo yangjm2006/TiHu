@@ -2,7 +2,9 @@ package com.tihu.frontend.controller;
 
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Spinner;
@@ -16,6 +18,8 @@ import java.util.Objects;
 
 public class BookDetailController implements MainContentController {
 
+    @FXML private Button backButton;
+    @FXML private Button favoriteButton;
     @FXML private Label titleLabel;
     @FXML private Label metaLabel;
     @FXML private TextArea descArea;
@@ -29,7 +33,7 @@ public class BookDetailController implements MainContentController {
     private final AppContext context = AppContext.getInstance();
     private MainController mainController;
     private final List<MockBackendService.CommentItem> flattenComments = new ArrayList<>();
-    private int bookId;
+    private long bookId;
 
     @Override
     public void setMainController(MainController mainController) {
@@ -43,10 +47,11 @@ public class BookDetailController implements MainContentController {
 
     @Override
     public void onShow() {
-        Integer selectedBookId = context.selectedBookId();
+        Long selectedBookId = context.selectedBookId();
         if (selectedBookId != null) {
             bookId = selectedBookId;
             refresh();
+            updateNavigationText();
         }
     }
 
@@ -64,8 +69,10 @@ public class BookDetailController implements MainContentController {
     @FXML
     private void onCollect() {
         try {
+            boolean wasCollected = context.service().isCollected(context.username(), bookId);
             context.service().toggleFavorite(context.username(), bookId);
-            messageLabel.setText("收藏状态已切换");
+            refresh();
+            messageLabel.setText(wasCollected ? "取消收藏成功" : "收藏成功");
         } catch (Exception ex) {
             messageLabel.setText(ex.getMessage());
         }
@@ -132,7 +139,11 @@ public class BookDetailController implements MainContentController {
     @FXML
     private void onBackToBooks() {
         if (mainController != null) {
-            mainController.onBooks();
+            if (context.bookDetailReturnTarget() == BookDetailReturnTarget.FAVORITES) {
+                mainController.onFavorites();
+            } else {
+                mainController.onBooks();
+            }
         }
     }
 
@@ -153,7 +164,7 @@ public class BookDetailController implements MainContentController {
     private void refresh() {
         MockBackendService.BookDetail detail = context.service().getBookDetail(bookId, context.username());
         titleLabel.setText(detail.book().title());
-        metaLabel.setText("作者：" + detail.book().author() + "  |  标签：" + String.join(", ", detail.book().tags()));
+        metaLabel.setText("作者：" + detail.book().author() + "  |  标签：" + String.join(" ", detail.book().tags()));
         descArea.setText(detail.book().intro());
 
         MockBackendService.RatingSummary summary = detail.ratingSummary();
@@ -177,6 +188,20 @@ public class BookDetailController implements MainContentController {
             }
         }
         commentListView.getItems().setAll(textItems);
+        updateFavoriteButton();
+    }
+
+    private void updateNavigationText() {
+        if (backButton != null) {
+            backButton.setText(context.bookDetailReturnTarget() == BookDetailReturnTarget.FAVORITES ? "← 返回收藏" : "← 返回列表");
+        }
+    }
+
+    private void updateFavoriteButton() {
+        if (favoriteButton != null) {
+            boolean collected = context.service().isCollected(context.username(), bookId);
+            favoriteButton.setText(collected ? "取消收藏" : "收藏");
+        }
     }
 
     private String formatDistribution(Map<Integer, Integer> dist) {

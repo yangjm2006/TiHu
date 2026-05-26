@@ -1,15 +1,14 @@
 package com.tihu.frontend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tihu.frontend.request.ApiClient;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,8 +23,7 @@ public class RemoteBackendService extends MockBackendService {
 
     private Long currentUserId;
     private String currentUsername;
-    private String currentPassword;
-    private Role currentRole;
+    private final Map<String, Long> userIdCache = new LinkedHashMap<>();
 
     public RemoteBackendService() {
         this(new ApiClient());
@@ -37,106 +35,123 @@ public class RemoteBackendService extends MockBackendService {
     }
 
     @Override
+    public synchronized Role login(String username, String password) {
+        return remoteOrFallback(() -> remoteLogin(username, password), () -> super.login(username, password));
+    }
+
+    @Override
+    public synchronized void registerUser(String username, String password) {
+        runRemoteOrFallback(() -> requestData("POST", "/users/register", json(Map.of(
+                "username", username,
+                "password", password
+        ))), () -> super.registerUser(username, password));
+    }
+
+    @Override
+    public synchronized void registerAdmin(String username, String password, String inviteCode) {
+        runRemoteOrFallback(() -> requestData("POST", "/users/register" + query(Map.of(
+                "inviteCode", inviteCode
+        )), json(Map.of(
+                "username", username,
+                "password", password
+        ))), () -> super.registerAdmin(username, password, inviteCode));
+    }
+
+    @Override
+    public synchronized void updateProfile(String currentUsername, String newUsername, String newPassword) {
+        runRemoteOrFallback(() -> remoteUpdateProfile(currentUsername, newUsername, newPassword),
+                () -> super.updateProfile(currentUsername, newUsername, newPassword));
+    }
+
+    @Override
     public void logout() {
         apiClient.setToken(null);
         apiClient.setSessionCookie(null);
         currentUserId = null;
         currentUsername = null;
-        currentPassword = null;
-        currentRole = null;
+        super.logout();
     }
 
     @Override
-    public String token() {
-        return apiClient.token();
-    }
-
-    @Override
-    public synchronized Role login(String username, String password) {
+    public synchronized Book getBook(long id) {
         return remoteOrFallback(() -> {
-            JsonNode data = requestData("POST", "/users/login", json(Map.of("username", username, "password", password)));
-            JsonNode userInfo = firstPresent(data, "userInfo", "user", "data");
-            if (userInfo == null || userInfo.isMissingNode() || userInfo.isNull()) {
-                throw new RemoteApiException("登录响应缺少 userInfo");
-            }
-
-            String token = text(firstPresent(data, "token", "accessToken"));
-            if (token != null && !token.isBlank()) {
-                apiClient.setToken(token);
-            }
-
-            currentUserId = longValue(userInfo, "id", null);
-            currentUsername = text(firstPresent(userInfo, "username"));
-            currentPassword = password;
-            currentRole = parseRole(text(firstPresent(userInfo, "role")));
-            if (currentRole == null) {
-                currentRole = Role.USER;
-            }
-            return currentRole;
-        }, () -> {
-            Role role = super.login(username, password);
-            currentUsername = username;
-            currentPassword = password;
-            currentRole = role;
-            return role;
-        });
+            JsonNode data = requestData("GET", "/books/" + id, null);
+            return parseBook(firstPresent(data, "bookInfo", "book", "data"), id);
+        }, () -> super.getBook(id));
     }
 
     @Override
-    public synchronized void registerUser(String username, String password) {
-        remoteOrFallback(() -> {
-            requestData("POST", "/users/register", json(Map.of("username", username, "password", password)));
-            currentUsername = username;
-            currentPassword = password;
-            currentRole = Role.USER;
-            return null;
-        }, () -> {
-            super.registerUser(username, password);
-            return null;
-        });
+    public synchronized Book getBook(int id) {
+        return getBook((long) id);
     }
 
     @Override
-    public synchronized void registerAdmin(String username, String password, String inviteCode) {
-        remoteOrFallback(() -> {
-            requestData("POST", "/users/register" + query(Map.of("inviteCode", inviteCode)), json(Map.of("username", username, "password", password)));
-            currentUsername = username;
-            currentPassword = password;
-            currentRole = Role.ADMIN;
-            return null;
-        }, () -> {
-            super.registerAdmin(username, password, inviteCode);
-            return null;
-        });
-    }
-
-    @Override
-    public synchronized void updateProfile(String currentUsername, String newUsername, String newPassword) {
-        remoteOrFallback(() -> {
-            Long userId = requireCurrentUserId();
-            if (newUsername != null && !newUsername.isBlank() && !Objects.equals(currentUsername, newUsername.trim())) {
-                requestData("PUT", "/users/" + userId + "/username" + query(Map.of("newUsername", newUsername.trim())), null);
-                this.currentUsername = newUsername.trim();
-            }
-            if (newPassword != null && !newPassword.isBlank()) {
-                if (currentPassword == null || currentPassword.isBlank()) {
-                    throw new RemoteApiException("当前会话缺少旧密码，请重新登录后再修改密码");
+    public synchronized BookDetail getBookDetail(long bookId, String currentUser) {
+        return remoteOrFallback(() -> {
+            JsonNode data = requestData("GET", "/books/" + bookId, null);
+            JsonNode bookNode = firstPresent(data, "bookInfo", "book", "data");
+            Book book = parseBook(bookNode, bookId);
+            List<String> tags = book.tags();
+            if (tags.isEmpty()) {
+                tags = fetchBookTags(bookId);
+                if (!tags.isEmpty()) {
+                    book = new Book(book.id(), book.title(), book.author(), book.intro(), tags);
                 }
-                requestData("PUT", "/users/" + userId + "/password" + query(Map.of("oldPassword", currentPassword, "newPassword", newPassword)), null);
-                currentPassword = newPassword;
             }
-            mirror(() -> super.updateProfile(currentUsername, newUsername, newPassword));
-            return null;
-        }, () -> {
-            super.updateProfile(currentUsername, newUsername, newPassword);
-            if (newUsername != null && !newUsername.isBlank()) {
-                this.currentUsername = newUsername.trim();
+            RatingSummary summary = parseRatingSummary(firstPresent(data, "ratings", "ratingSummary", "data"), bookId, currentUser);
+            if (summary == null) {
+                summary = fetchRatingSummary(bookId, currentUser);
             }
-            if (newPassword != null && !newPassword.isBlank()) {
-                currentPassword = newPassword;
+            List<CommentItem> comments = parseComments(firstPresent(data, "comments", "commentList", "data"));
+            List<CommentItem> replies = parseComments(firstPresent(data, "replies", "replyList"));
+            if (comments.isEmpty() && replies.isEmpty()) {
+                comments = parseComments(requestPageData("/comments/book/" + bookId + query(Map.of("page", 1, "size", 100))));
             }
-            return null;
-        });
+            return new BookDetail(book, summary, comments, replies);
+        }, () -> super.getBookDetail(bookId, currentUser));
+    }
+
+    @Override
+    public synchronized BookDetail getBookDetail(int bookId, String currentUser) {
+        return getBookDetail((long) bookId, currentUser);
+    }
+
+    @Override
+    public synchronized void rateBook(long bookId, String username, int score) {
+        runRemoteOrFallback(() -> requestData("POST", "/ratings" + query(Map.of("bookId", bookId, "score", score)), null),
+                () -> super.rateBook(bookId, username, score));
+    }
+
+    @Override
+    public synchronized void rateBook(int bookId, String username, int score) {
+        rateBook((long) bookId, username, score);
+    }
+
+    @Override
+    public synchronized void toggleFavorite(String username, long bookId) {
+        runRemoteOrFallback(() -> {
+            boolean collected = isCollected(bookId);
+            if (collected) {
+                requestData("DELETE", "/collections" + query(Map.of("bookId", bookId)), null);
+            } else {
+                requestData("POST", "/collections" + query(Map.of("bookId", bookId)), null);
+            }
+        }, () -> super.toggleFavorite(username, bookId));
+    }
+
+    @Override
+    public synchronized void toggleFavorite(String username, int bookId) {
+        toggleFavorite(username, (long) bookId);
+    }
+
+    @Override
+    public synchronized boolean isCollected(String username, long bookId) {
+        return remoteOrFallback(() -> isCollected(bookId), () -> super.isCollected(username, bookId));
+    }
+
+    @Override
+    public synchronized boolean isCollected(String username, int bookId) {
+        return isCollected(username, (long) bookId);
     }
 
     @Override
@@ -154,176 +169,119 @@ public class RemoteBackendService extends MockBackendService {
     }
 
     @Override
-    public synchronized BookDetail getBookDetail(int bookId, String currentUser) {
-        return remoteOrFallback(() -> {
-            JsonNode data = requestData("GET", "/books/" + bookId, null);
-            Book book = parseBook(firstPresent(data, "bookInfo", "book", "data"), bookId);
-            RatingSummary summary = parseRatingSummary(firstPresent(data, "ratings", "ratingSummary", "data"), bookId, currentUser);
-            if (summary == null) {
-                summary = fetchRatingSummary(bookId, currentUser);
-            }
-
-            List<CommentItem> comments = parseComments(firstPresent(data, "comments"));
-            List<CommentItem> replies = parseComments(firstPresent(data, "replies"));
-            if (comments.isEmpty() && replies.isEmpty()) {
-                comments = parseComments(requestPageData("/comments/book/" + bookId + query(Map.of("page", 1, "size", 100))));
-            }
-
-            return new BookDetail(book, summary, comments, replies);
-        }, () -> super.getBookDetail(bookId, currentUser));
-    }
-
-    @Override
-    public synchronized void rateBook(int bookId, String username, int score) {
-        remoteOrFallback(() -> {
-            requestData("POST", "/ratings" + query(Map.of("bookId", bookId, "score", score)), null);
-            mirror(() -> super.rateBook(bookId, username, score));
-            return null;
-        }, () -> {
-            super.rateBook(bookId, username, score);
-            return null;
-        });
-    }
-
-    @Override
-    public synchronized void toggleFavorite(String username, int bookId) {
-        remoteOrFallback(() -> {
-            boolean collected = isCollected(bookId);
-            if (collected) {
-                requestData("DELETE", "/collections" + query(Map.of("bookId", bookId)), null);
-            } else {
-                requestData("POST", "/collections" + query(Map.of("bookId", bookId)), null);
-            }
-            mirror(() -> super.toggleFavorite(username, bookId));
-            return null;
-        }, () -> {
-            super.toggleFavorite(username, bookId);
-            return null;
-        });
-    }
-
-    @Override
-    public synchronized List<BookCard> listFavorites(String username) {
-        return remoteOrFallback(() -> {
-            JsonNode data = requestPageData("/collections" + query(Map.of("page", 1, "size", 100)));
-            List<BookCard> result = new ArrayList<>();
-            for (JsonNode item : pageRecords(data)) {
-                int bookId = intValue(firstPresent(item, "bookId", "id"), -1);
-                if (bookId <= 0) {
-                    continue;
-                }
-                BookDetail detail = getBookDetail(bookId, username);
-                result.add(new BookCard(detail.book().id(), detail.book().title(), detail.book().author(),
-                        String.join(", ", detail.book().tags()), formatAvg(detail.ratingSummary())));
-            }
-            return result;
-        }, () -> super.listFavorites(username));
-    }
-
-    @Override
-    public synchronized CommentItem addComment(int bookId, String username, String content, Long parentCommentId) {
-        return remoteOrFallback(() -> {
-            JsonNode data = requestData("POST", "/comments" + query(mapOf(
-                    "bookId", bookId,
-                    "content", content,
-                    "parentCommentId", parentCommentId
-            )), null);
-            CommentItem item = parseComment(firstPresent(data, "comment", "data"), username);
-            if (item == null) {
-                item = new CommentItem(longValue(firstPresent(data, "id"), System.currentTimeMillis()), username,
-                        content.trim(), LocalDateTime.now(), parentCommentId, 0, 0);
-            }
-            mirror(() -> super.addComment(bookId, username, content, parentCommentId));
-            return item;
-        }, () -> super.addComment(bookId, username, content, parentCommentId));
+    public synchronized void updateBook(long bookId, String title, String author, String intro, String tagsText) {
+        runRemoteOrFallback(() -> {
+            List<String> tags = parseTagInput(tagsText);
+            requestData("PUT", "/books/" + bookId, json(mapOf(
+                    "title", title,
+                    "author", author,
+                    "description", intro,
+                    "cover", "",
+                    "tags", tags
+            )));
+        }, () -> super.updateBook(bookId, title, author, intro, tagsText));
     }
 
     @Override
     public synchronized void updateBook(int bookId, String title, String author, String intro, String tagsText) {
-        remoteOrFallback(() -> {
-            requestData("PUT", "/books/" + bookId, json(mapOf(
+        updateBook((long) bookId, title, author, intro, tagsText);
+    }
+
+    @Override
+    public synchronized Book addBook(String title, String author, String intro, String tagsText) {
+        return remoteOrFallback(() -> {
+            List<String> tags = parseTagInput(tagsText);
+            JsonNode data = requestData("POST", "/books", json(mapOf(
                     "title", title,
-                    "author", safe(author),
-                    "description", safe(intro),
-                    "cover", ""
+                    "author", author,
+                    "description", intro,
+                    "cover", "",
+                    "tags", tags
             )));
-            mirror(() -> super.updateBook(bookId, title, author, intro, tagsText));
-            return null;
-        }, () -> {
-            super.updateBook(bookId, title, author, intro, tagsText);
-            return null;
-        });
+            Book book = parseBook(firstPresent(data, "book", "data", "bookInfo"), -1L);
+            if (book != null) {
+                return book;
+            }
+            return super.addBook(title, author, intro, tagsText);
+        }, () -> super.addBook(title, author, intro, tagsText));
+    }
+
+    @Override
+    public synchronized void deleteBook(long bookId) {
+        runRemoteOrFallback(() -> requestData("DELETE", "/books/" + bookId, null), () -> super.deleteBook(bookId));
+    }
+
+    @Override
+    public synchronized void deleteBook(int bookId) {
+        deleteBook((long) bookId);
+    }
+
+    @Override
+    public synchronized CommentItem addComment(long bookId, String username, String content, Long parentCommentId) {
+        return remoteOrFallback(() -> {
+            Map<String, Object> params = new LinkedHashMap<>();
+            params.put("bookId", bookId);
+            params.put("content", content);
+            if (parentCommentId != null) {
+                params.put("parentCommentId", parentCommentId);
+            }
+            JsonNode data = requestData("POST", "/comments" + query(params), null);
+            CommentItem item = parseCommentItem(firstPresent(data, "comment", "data"));
+            return item != null ? item : super.addComment(bookId, username, content, parentCommentId);
+        }, () -> super.addComment(bookId, username, content, parentCommentId));
+    }
+
+    @Override
+    public synchronized CommentItem addComment(int bookId, String username, String content, Long parentCommentId) {
+        return addComment((long) bookId, username, content, parentCommentId);
+    }
+
+    @Override
+    public synchronized void deleteOwnComment(long bookId, long commentId, String username) {
+        runRemoteOrFallback(() -> requestData("DELETE", "/comments/" + commentId, null),
+                () -> super.deleteOwnComment(bookId, commentId, username));
     }
 
     @Override
     public synchronized void deleteOwnComment(int bookId, long commentId, String username) {
-        remoteOrFallback(() -> {
-            requestData("DELETE", "/comments/" + commentId, null);
-            mirror(() -> super.deleteOwnComment(bookId, commentId, username));
-            return null;
-        }, () -> {
-            super.deleteOwnComment(bookId, commentId, username);
-            return null;
-        });
+        deleteOwnComment((long) bookId, commentId, username);
+    }
+
+    @Override
+    public synchronized void adminDeleteComment(long bookId, long commentId) {
+        runRemoteOrFallback(() -> requestData("DELETE", "/comments/admin/" + commentId, null),
+                () -> super.adminDeleteComment(bookId, commentId));
     }
 
     @Override
     public synchronized void adminDeleteComment(int bookId, long commentId) {
-        remoteOrFallback(() -> {
-            requestData("DELETE", "/comments/admin/" + commentId, null);
-            mirror(() -> super.adminDeleteComment(bookId, commentId));
-            return null;
-        }, () -> {
-            super.adminDeleteComment(bookId, commentId);
-            return null;
-        });
+        adminDeleteComment((long) bookId, commentId);
     }
 
     @Override
     public synchronized void adminDeleteComment(long commentId) {
-        remoteOrFallback(() -> {
-            requestData("DELETE", "/comments/admin/" + commentId, null);
-            mirror(() -> super.adminDeleteComment(commentId));
-            return null;
-        }, () -> {
-            super.adminDeleteComment(commentId);
-            return null;
-        });
+        runRemoteOrFallback(() -> requestData("DELETE", "/comments/admin/" + commentId, null),
+                () -> super.adminDeleteComment(commentId));
     }
 
     @Override
     public synchronized void voteComment(long commentId, String username, int target) {
-        remoteOrFallback(() -> {
-            if (target == 1) {
-                requestData("POST", "/comments/" + commentId + "/like", null);
-            } else if (target == -1) {
-                requestData("POST", "/comments/" + commentId + "/dislike", null);
-            } else {
-                requestData("DELETE", "/comments/" + commentId + "/like", null);
-            }
-            mirror(() -> super.voteComment(commentId, username, target));
-            return null;
-        }, () -> {
-            super.voteComment(commentId, username, target);
-            return null;
-        });
+        runRemoteOrFallback(() -> requestData("POST", "/comments/" + commentId + "/votes" + query(Map.of("target", target)), null),
+                () -> super.voteComment(commentId, username, target));
     }
 
     @Override
     public synchronized List<UserBookList> listBookLists(String username) {
         return remoteOrFallback(() -> {
-            Long userId = resolveUserId(username);
-            JsonNode page = requestPageData("/book-lists" + query(Map.of("page", 1, "size", 100)));
-            List<UserBookList> lists = new ArrayList<>();
+            JsonNode page = requestPageData("/book-lists" + query(Map.of("page", 1, "size", 1000)));
+            List<UserBookList> result = new ArrayList<>();
             for (JsonNode item : pageRecords(page)) {
-                if (intValue(firstPresent(item, "userId", "ownerId"), -1) != userId.intValue()) {
-                    continue;
+                UserBookList list = parseBookList(item);
+                if (list != null && Objects.equals(list.owner(), username)) {
+                    result.add(list);
                 }
-                long listId = longValue(item, "id", null);
-                UserBookList detail = getBookList(username, listId);
-                lists.add(detail);
             }
-            return lists;
+            return result;
         }, () -> super.listBookLists(username));
     }
 
@@ -331,95 +289,72 @@ public class RemoteBackendService extends MockBackendService {
     public synchronized UserBookList createBookList(String username, String title, String intro) {
         return remoteOrFallback(() -> {
             JsonNode data = requestData("POST", "/book-lists" + query(mapOf("title", title, "description", intro)), null);
-            UserBookList list = parseBookListDetail(firstPresent(data, "data", "bookList", "book_list"), username);
-            if (list == null) {
-                long id = longValue(firstPresent(data, "id"), System.currentTimeMillis());
-                list = new UserBookList(id, username, title == null ? "" : title.trim(), intro == null ? "" : intro.trim(), new ArrayList<>());
-            }
-            mirror(() -> super.createBookList(username, title, intro));
-            return list;
+            UserBookList list = parseBookList(firstPresent(data, "bookList", "data", "list"));
+            return list != null ? list : super.createBookList(username, title, intro);
         }, () -> super.createBookList(username, title, intro));
     }
 
     @Override
     public synchronized void deleteBookList(String username, long listId) {
-        remoteOrFallback(() -> {
-            requestData("DELETE", "/book-lists/" + listId, null);
-            mirror(() -> super.deleteBookList(username, listId));
-            return null;
-        }, () -> {
-            super.deleteBookList(username, listId);
-            return null;
-        });
+        runRemoteOrFallback(() -> requestData("DELETE", "/book-lists/" + listId, null),
+                () -> super.deleteBookList(username, listId));
     }
 
     @Override
     public synchronized UserBookList getBookList(String owner, long listId) {
         return remoteOrFallback(() -> {
             JsonNode data = requestData("GET", "/book-lists/" + listId, null);
-            return parseBookListDetail(data, owner);
+            UserBookList list = parseBookList(firstPresent(data, "bookList", "data", "list"));
+            if (list == null) {
+                list = parseBookList(data);
+            }
+            return list != null ? list : super.getBookList(owner, listId);
         }, () -> super.getBookList(owner, listId));
     }
 
     @Override
+    public synchronized void addBookToBookList(String username, long listId, long bookId) {
+        runRemoteOrFallback(() -> requestData("POST", "/book-lists/" + listId + "/books" + query(Map.of("bookId", bookId)), null),
+                () -> super.addBookToBookList(username, listId, bookId));
+    }
+
+    @Override
     public synchronized void addBookToBookList(String username, long listId, int bookId) {
-        remoteOrFallback(() -> {
-            requestData("POST", "/book-lists/" + listId + "/books" + query(Map.of("bookId", bookId)), null);
-            mirror(() -> super.addBookToBookList(username, listId, bookId));
-            return null;
-        }, () -> {
-            super.addBookToBookList(username, listId, bookId);
-            return null;
-        });
+        addBookToBookList(username, listId, (long) bookId);
+    }
+
+    @Override
+    public synchronized void removeBookFromBookList(String username, long listId, long bookId) {
+        runRemoteOrFallback(() -> requestData("DELETE", "/book-lists/" + listId + "/books" + query(Map.of("bookId", bookId)), null),
+                () -> super.removeBookFromBookList(username, listId, bookId));
     }
 
     @Override
     public synchronized void removeBookFromBookList(String username, long listId, int bookId) {
-        remoteOrFallback(() -> {
-            requestData("DELETE", "/book-lists/" + listId + "/books" + query(Map.of("bookId", bookId)), null);
-            mirror(() -> super.removeBookFromBookList(username, listId, bookId));
-            return null;
-        }, () -> {
-            super.removeBookFromBookList(username, listId, bookId);
-            return null;
-        });
+        removeBookFromBookList(username, listId, (long) bookId);
     }
 
     @Override
     public synchronized void follow(String me, String target) {
-        remoteOrFallback(() -> {
-            long targetId = resolveUserId(target);
-            requestData("POST", "/follows" + query(Map.of("followeeId", targetId)), null);
-            mirror(() -> super.follow(me, target));
-            return null;
-        }, () -> {
-            super.follow(me, target);
-            return null;
-        });
+        runRemoteOrFallback(() -> requestData("POST", "/follows" + resolveFollowQuery(target), null),
+                () -> super.follow(me, target));
     }
 
     @Override
     public synchronized void unfollow(String me, String target) {
-        remoteOrFallback(() -> {
-            long targetId = resolveUserId(target);
-            requestData("DELETE", "/follows" + query(Map.of("followeeId", targetId)), null);
-            mirror(() -> super.unfollow(me, target));
-            return null;
-        }, () -> {
-            super.unfollow(me, target);
-            return null;
-        });
+        runRemoteOrFallback(() -> requestData("DELETE", "/follows" + resolveFollowQuery(target), null),
+                () -> super.unfollow(me, target));
     }
 
     @Override
     public synchronized List<FollowItem> listFollowing(String username) {
         return remoteOrFallback(() -> {
-            JsonNode page = requestPageData("/follows/followees" + query(Map.of("page", 1, "size", 100)));
+            JsonNode page = requestPageData("/follows/followees" + query(Map.of("page", 1, "size", 1000)));
             List<FollowItem> result = new ArrayList<>();
             for (JsonNode item : pageRecords(page)) {
-                Long followeeId = longValue(firstPresent(item, "followeeId", "userId", "targetId"), null);
-                if (followeeId != null) {
-                    result.add(new FollowItem(resolveUsername(followeeId)));
+                FollowItem follow = parseFollowItem(item);
+                if (follow != null) {
+                    result.add(follow);
                 }
             }
             return result;
@@ -429,12 +364,12 @@ public class RemoteBackendService extends MockBackendService {
     @Override
     public synchronized List<FollowItem> listFollowers(String username) {
         return remoteOrFallback(() -> {
-            JsonNode page = requestPageData("/follows/followers" + query(Map.of("page", 1, "size", 100)));
+            JsonNode page = requestPageData("/follows/followers" + query(Map.of("page", 1, "size", 1000)));
             List<FollowItem> result = new ArrayList<>();
             for (JsonNode item : pageRecords(page)) {
-                Long followerId = longValue(firstPresent(item, "followerId", "userId", "sourceId"), null);
-                if (followerId != null) {
-                    result.add(new FollowItem(resolveUsername(followerId)));
+                FollowItem follow = parseFollowItem(item);
+                if (follow != null) {
+                    result.add(follow);
                 }
             }
             return result;
@@ -444,69 +379,43 @@ public class RemoteBackendService extends MockBackendService {
     @Override
     public synchronized UserProfile getUserProfile(String target, String currentUser) {
         return remoteOrFallback(() -> {
-            JsonNode data = requestData("GET", "/users/profile/" + encodePathSegment(target), null);
-            JsonNode userInfo = firstPresent(data, "userInfo", "user", "data");
-            if (userInfo == null || userInfo.isMissingNode() || userInfo.isNull()) {
-                throw new RemoteApiException("用户主页响应缺少 userInfo");
-            }
-
-            String username = text(firstPresent(userInfo, "username"));
-            if (username == null || username.isBlank()) {
-                username = target;
-            }
-
-            List<CommentItem> comments = parseComments(firstPresent(data, "comments", "commentList"));
-            List<UserBookList> lists = parseBookLists(firstPresent(data, "bookLists", "lists"), username);
-            int followingCount = intValue(firstPresent(data, "followingCount", "followeeCount"), 0);
-            int followerCount = intValue(firstPresent(data, "followerCount", "followersCount"), 0);
-            boolean followed = boolValue(firstPresent(data, "followedByCurrentUser", "followed"), false);
-            return new UserProfile(username, comments, lists, followingCount, followerCount, followed);
+            JsonNode data = requestData("GET", "/users/profile" + query(Map.of("username", target)), null);
+            UserProfile profile = parseUserProfile(data, target, currentUser);
+            return profile != null ? profile : super.getUserProfile(target, currentUser);
         }, () -> super.getUserProfile(target, currentUser));
     }
 
     @Override
     public synchronized void sendMessage(String from, String to, String content) {
-        remoteOrFallback(() -> {
-            long receiverId = resolveUserId(to);
-            requestData("POST", "/messages" + query(Map.of("receiverId", receiverId, "content", content)), null);
-            mirror(() -> super.sendMessage(from, to, content));
-            return null;
-        }, () -> {
-            super.sendMessage(from, to, content);
-            return null;
-        });
+        runRemoteOrFallback(() -> requestData("POST", "/messages" + resolveMessageQuery(to, content), null),
+                () -> super.sendMessage(from, to, content));
     }
 
     @Override
     public synchronized List<ConversationPreview> listConversations(String username) {
         return remoteOrFallback(() -> {
-            JsonNode data = requestData("GET", "/messages/conversations", null);
-            List<ConversationPreview> list = new ArrayList<>();
-            for (JsonNode item : elements(data)) {
-                Long peerId = longValue(firstPresent(item, "peerId", "targetUserId", "otherUserId"), null);
-                String peer = peerId == null ? text(firstPresent(item, "peer")) : resolveUsername(peerId);
-                String lastMessage = text(firstPresent(item, "lastMessage", "content", "message"));
-                LocalDateTime lastTime = parseDateTime(firstPresent(item, "lastTime", "createTime", "time"));
-                if (peer != null) {
-                    list.add(new ConversationPreview(peer, lastMessage == null ? "" : lastMessage, lastTime == null ? LocalDateTime.now() : lastTime));
+            JsonNode data = requestPageData("/messages/conversations");
+            List<ConversationPreview> result = new ArrayList<>();
+            for (JsonNode item : pageRecords(data)) {
+                ConversationPreview preview = parseConversationPreview(item);
+                if (preview != null) {
+                    result.add(preview);
                 }
             }
-            return list.stream().sorted((a, b) -> b.lastTime().compareTo(a.lastTime())).toList();
+            return result;
         }, () -> super.listConversations(username));
     }
 
     @Override
     public synchronized List<MessageItem> listMessages(String me, String peer) {
         return remoteOrFallback(() -> {
-            long peerId = resolveUserId(peer);
-            JsonNode data = requestData("GET", "/messages/conversation/" + peerId + query(Map.of("page", 1, "size", 100)), null);
+            JsonNode page = requestPageData("/messages/conversation/" + resolveConversationPeer(peer) + query(Map.of("page", 1, "size", 100)));
             List<MessageItem> result = new ArrayList<>();
-            for (JsonNode item : elements(data)) {
-                String from = resolveUsername(longValue(firstPresent(item, "senderId", "fromUserId"), requireCurrentUserId()));
-                String to = resolveUsername(longValue(firstPresent(item, "receiverId", "toUserId"), peerId));
-                String content = text(firstPresent(item, "content"));
-                LocalDateTime time = parseDateTime(firstPresent(item, "createTime", "time"));
-                result.add(new MessageItem(from, to, content == null ? "" : content, time == null ? LocalDateTime.now() : time));
+            for (JsonNode item : pageRecords(page)) {
+                MessageItem message = parseMessageItem(item);
+                if (message != null) {
+                    result.add(message);
+                }
             }
             return result;
         }, () -> super.listMessages(me, peer));
@@ -515,440 +424,693 @@ public class RemoteBackendService extends MockBackendService {
     @Override
     public synchronized List<BanInfo> listBans() {
         return remoteOrFallback(() -> {
-            JsonNode data = requestData("GET", "/users/admin/bans", null);
+            JsonNode page = requestPageData("/users/bans" + query(Map.of("page", 1, "size", 1000)));
             List<BanInfo> result = new ArrayList<>();
-            for (JsonNode item : elements(data)) {
-                String username = text(firstPresent(item, "username"));
-                LocalDateTime until = parseDateTime(firstPresent(item, "bannedUntil", "banExpireTime"));
-                if (username != null && until != null) {
-                    result.add(new BanInfo(username, until));
+            for (JsonNode item : pageRecords(page)) {
+                BanInfo info = parseBanInfo(item);
+                if (info != null) {
+                    result.add(info);
                 }
             }
             return result;
-        }, () -> super.listBans());
+        }, super::listBans);
     }
 
     @Override
     public synchronized void banUser(String username, LocalDateTime until) {
-        remoteOrFallback(() -> {
-            long userId = resolveUserId(username);
-            long seconds = Math.max(1L, Duration.between(LocalDateTime.now(), until).getSeconds());
-            requestData("POST", "/users/admin/" + userId + "/ban" + query(Map.of("durationSeconds", seconds)), null);
-            mirror(() -> super.banUser(username, until));
-            return null;
-        }, () -> {
-            super.banUser(username, until);
-            return null;
-        });
+        runRemoteOrFallback(() -> requestData("POST", "/users/ban" + query(mapOf("username", username, "until", until == null ? null : until.toString())), null),
+                () -> super.banUser(username, until));
     }
 
     @Override
     public synchronized void unbanUser(String username) {
-        remoteOrFallback(() -> {
-            long userId = resolveUserId(username);
-            requestData("DELETE", "/users/admin/" + userId + "/ban", null);
-            mirror(() -> super.unbanUser(username));
-            return null;
-        }, () -> {
-            super.unbanUser(username);
-            return null;
-        });
+        runRemoteOrFallback(() -> requestData("POST", "/users/unban" + query(Map.of("username", username)), null),
+                () -> super.unbanUser(username));
     }
 
     @Override
     public synchronized List<CommentItem> adminListAllComments() {
         return remoteOrFallback(() -> {
-            JsonNode data = requestData("GET", "/comments/admin/all", null);
-            return parseComments(data);
-        }, () -> super.adminListAllComments());
-    }
-
-    @Override
-    public synchronized Book addBook(String title, String author, String intro, String tagsText) {
-        return remoteOrFallback(() -> {
-            JsonNode data = requestData("POST", "/books", json(Map.of(
-                    "title", title,
-                    "author", author,
-                    "description", intro,
-                    "cover", ""
-            )));
-            Book book = parseBook(firstPresent(data, "book", "data"), -1);
-            if (book == null) {
-                long id = longValue(firstPresent(data, "id"), System.currentTimeMillis());
-                book = new Book((int) id, safe(title), safe(author), safe(intro), List.of());
+            JsonNode page = requestPageData("/comments/admin" + query(Map.of("page", 1, "size", 1000)));
+            List<CommentItem> result = new ArrayList<>();
+            for (JsonNode item : pageRecords(page)) {
+                CommentItem comment = parseCommentItem(item);
+                if (comment != null) {
+                    result.add(comment);
+                }
             }
-            mirror(() -> super.addBook(title, author, intro, tagsText));
-            return book;
-        }, () -> super.addBook(title, author, intro, tagsText));
+            return result;
+        }, super::adminListAllComments);
     }
 
     @Override
-    public synchronized void deleteBook(int bookId) {
-        remoteOrFallback(() -> {
-            requestData("DELETE", "/books/" + bookId, null);
-            mirror(() -> super.deleteBook(bookId));
-            return null;
-        }, () -> {
-            super.deleteBook(bookId);
-            return null;
-        });
-    }
-
-    @Override
-    public synchronized Book getBook(int id) {
+    public synchronized List<BookCard> listFavorites(String username) {
         return remoteOrFallback(() -> {
-            // Avoid calling getBookDetail() here because MockBackendService.getBookDetail()
-            // calls getBook(), which is overridden — that can produce an infinite
-            // recursion when remote requests fail and fall back to super implementations.
-            // Instead, fetch the minimal book info directly from the remote API.
-            JsonNode data = requestData("GET", "/books/" + id, null);
-            Book book = parseBook(firstPresent(data, "bookInfo", "book", "data"), id);
-            if (book == null) {
-                // If remote response doesn't contain book info, fall back to super
-                return super.getBook(id);
+            JsonNode page = requestPageData("/collections" + query(Map.of("page", 1, "size", 1000)));
+            List<BookCard> result = new ArrayList<>();
+            for (JsonNode item : pageRecords(page)) {
+                BookCard card = parseFavoriteCard(item, username);
+                if (card != null) {
+                    result.add(card);
+                }
             }
-            return book;
-        }, () -> super.getBook(id));
+            return result;
+        }, () -> super.listFavorites(username));
     }
 
     private List<BookCard> fetchCatalog(String titleKeyword, List<String> tags) throws IOException, InterruptedException {
-        JsonNode page = requestPageData("/books" + query(Map.of("page", 1, "size", 1000)));
-        List<BookCard> cards = new ArrayList<>();
         boolean needTags = tags != null && !tags.isEmpty();
+        JsonNode page = needTags
+                ? requestPageData("/books/search-by-tags" + query(mapOf("tags", tags, "page", 1, "size", 1000)))
+                : requestPageData("/books" + query(Map.of("page", 1, "size", 1000)));
+        List<BookCard> result = new ArrayList<>();
         for (JsonNode item : pageRecords(page)) {
-            BookCard card = parseBookCard(item, currentUsername == null ? "" : currentUsername);
+            BookCard card = parseBookCard(item, currentUsername);
             if (card == null) {
                 continue;
             }
-
-            String title = card.title();
-            if (titleKeyword != null && !titleKeyword.isBlank() && !title.toLowerCase(Locale.ROOT).contains(titleKeyword.trim().toLowerCase(Locale.ROOT))) {
-                continue;
+            if (containsKeyword(card.title(), titleKeyword)) {
+                result.add(card);
             }
-            if (needTags && !card.tagsSummary().isBlank()) {
-                List<String> cardTags = parseStringListFromSummary(card.tagsSummary());
-                if (!cardTags.isEmpty()) {
-                    boolean match = tags.stream()
-                            .map(s -> s.toLowerCase(Locale.ROOT))
-                            .allMatch(tag -> cardTags.stream().map(v -> v.toLowerCase(Locale.ROOT)).collect(Collectors.toSet()).contains(tag));
-                    if (!match) {
-                        continue;
-                    }
-                }
-            }
-            cards.add(card);
         }
-        return cards;
+        if (needTags && !tags.isEmpty()) {
+            List<String> lowerNeed = tags.stream().map(s -> s.toLowerCase(Locale.ROOT)).toList();
+            result = result.stream()
+                    .filter(card -> {
+                        List<String> cardTags = parseStringListFromSummary(card.tagsSummary());
+                        if (cardTags.isEmpty()) {
+                            return false;
+                        }
+                        return lowerNeed.stream().allMatch(tag -> cardTags.stream()
+                                .map(v -> v.toLowerCase(Locale.ROOT))
+                                .collect(Collectors.toSet())
+                                .contains(tag));
+                    })
+                    .toList();
+        }
+        return result;
     }
 
     private BookCard parseBookCard(JsonNode item, String currentUser) throws IOException, InterruptedException {
         if (item == null || item.isMissingNode() || item.isNull()) {
             return null;
         }
+        JsonNode bookNode = firstPresent(item, "bookInfo", "book", "data");
+        long bookId = longValue(firstPresent(item, "id", "bookId", "book_id"), -1L);
+        if (bookId <= 0) {
+            bookId = longValue(firstPresent(bookNode, "id", "bookId", "book_id"), -1L);
+        }
+        if (bookId <= 0) {
+            return null;
+        }
+        String title = text(firstPresent(item, "title", "bookTitle"));
+        if (title == null || title.isBlank()) {
+            title = text(firstPresent(bookNode, "title", "bookTitle"));
+        }
+        String author = text(firstPresent(item, "author", "bookAuthor"));
+        if (author == null || author.isBlank()) {
+            author = text(firstPresent(bookNode, "author", "bookAuthor"));
+        }
+        List<String> tags = parseStringList(firstPresent(item, "tags", "tagNames", "tagList"));
+        if (tags.isEmpty()) {
+            tags = parseStringList(firstPresent(bookNode, "tags", "tagNames", "tagList"));
+        }
+        if (tags.isEmpty()) {
+            tags = parseStringListFromSummary(text(firstPresent(item, "tagsSummary", "tags_summary")));
+        }
+        if (tags.isEmpty()) {
+            tags = fetchBookTags(bookId);
+        }
+        RatingSummary summary = parseRatingSummary(item, bookId, currentUser);
+        JsonNode nestedRatings = firstPresent(item, "ratings", "ratingSummary");
+        if (nestedRatings != null) {
+            RatingSummary nestedSummary = parseRatingSummary(nestedRatings, bookId, currentUser);
+            if (nestedSummary != null && (summary == null || nestedSummary.count() > 0)) {
+                summary = nestedSummary;
+            }
+        }
+        if (summary == null || summary.count() == 0) {
+            summary = fetchRatingSummary(bookId, currentUser);
+        }
+        if (title == null) {
+            title = "";
+        }
+        if (author == null) {
+            author = "";
+        }
+        return new BookCard(bookId, title, author, String.join(" ", tags), formatAvg(summary));
+    }
+
+    private BookCard parseFavoriteCard(JsonNode item, String username) throws IOException, InterruptedException {
+        if (item == null || item.isMissingNode() || item.isNull()) {
+            return null;
+        }
+        String owner = safe(text(firstPresent(item, "owner", "username", "user", "nickname")));
+        if (owner != null && !owner.isBlank() && username != null && !username.isBlank() && !owner.equals(username)) {
+            return null;
+        }
+        BookCard card = parseBookCard(item, username);
+        if (card != null) {
+            return card;
+        }
 
         JsonNode bookNode = firstPresent(item, "bookInfo", "book", "data");
-        int bookId = intValue(firstPresent(item, "id", "bookId", "book_id"), -1);
-        if (bookId <= 0) {
-            bookId = intValue(firstPresent(bookNode, "id", "bookId", "book_id"), -1);
+        long bookId = longValue(firstPresent(item, "bookId", "book_id", "id"), -1L);
+        if (bookId <= 0 && bookNode != null) {
+            bookId = longValue(firstPresent(bookNode, "id", "bookId", "book_id"), -1L);
         }
         if (bookId <= 0) {
             return null;
         }
 
-        String title = text(firstPresent(item, "title", "bookTitle", "name"));
-        String author = text(firstPresent(item, "author", "bookAuthor"));
+        String title = safe(text(firstPresent(item, "title", "bookTitle")));
+        String author = safe(text(firstPresent(item, "author", "bookAuthor")));
         List<String> tags = parseStringList(firstPresent(item, "tags", "tagNames", "tagList"));
-
-        RatingSummary summary = parseRatingSummary(firstPresent(item, "ratings", "ratingSummary"), bookId, currentUser);
-
-        if (title == null || title.isBlank() || author == null || author.isBlank() || tags.isEmpty() || summary == null) {
-            BookDetail detail = getBookDetail(bookId, currentUser);
-            if (title == null || title.isBlank()) {
-                title = detail.book().title();
-            }
-            if (author == null || author.isBlank()) {
-                author = detail.book().author();
-            }
-            if (tags.isEmpty()) {
-                tags = detail.book().tags();
-            }
-            if (summary == null) {
-                summary = detail.ratingSummary();
+        if (tags.isEmpty() && bookNode != null) {
+            tags = parseStringList(firstPresent(bookNode, "tags", "tagNames", "tagList"));
+        }
+        if (tags.isEmpty()) {
+            tags = parseStringListFromSummary(text(firstPresent(item, "tagsSummary", "tags_summary")));
+        }
+        if (title.isBlank() || author.isBlank()) {
+            try {
+                Book book = getBook(bookId);
+                if (title.isBlank()) {
+                    title = book.title();
+                }
+                if (author.isBlank()) {
+                    author = book.author();
+                }
+                if (tags.isEmpty()) {
+                    tags = book.tags();
+                }
+            } catch (Exception ignore) {
             }
         }
 
-        return new BookCard(bookId,
-                title == null ? "" : title,
-                author == null ? "" : author,
-                String.join(", ", tags),
-                formatAvg(summary));
+        RatingSummary summary = parseRatingSummary(item, bookId, username);
+        if (summary == null || summary.count() == 0) {
+            summary = fetchRatingSummary(bookId, username);
+        }
+        return new BookCard(bookId, title, author, String.join(" ", tags), formatAvg(summary));
     }
 
-    private List<String> parseStringListFromSummary(String summary) {
-        if (summary == null || summary.isBlank()) {
+    private Book parseBook(JsonNode node, long fallbackId) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        long id = longValue(firstPresent(node, "id", "bookId", "book_id"), fallbackId);
+        String title = safe(text(firstPresent(node, "title", "bookTitle")));
+        String author = safe(text(firstPresent(node, "author", "bookAuthor")));
+        String intro = safe(text(firstPresent(node, "description", "intro")));
+        List<String> tags = parseStringList(firstPresent(node, "tags"));
+        if (tags.isEmpty()) {
+            tags = parseStringListFromSummary(text(firstPresent(node, "tagsSummary", "tags_summary")));
+        }
+        if (tags.isEmpty()) {
+            JsonNode bookInfo = firstPresent(node, "bookInfo");
+            if (bookInfo != null && bookInfo != node) {
+                tags = parseStringList(firstPresent(bookInfo, "tags"));
+                if (tags.isEmpty()) {
+                    tags = parseStringListFromSummary(text(firstPresent(bookInfo, "tagsSummary", "tags_summary")));
+                }
+            }
+        }
+        if (tags.isEmpty() && id > 0) {
+            tags = fetchBookTags(id);
+        }
+        return new Book(id, title, author, intro, tags);
+    }
+
+    private List<String> fetchBookTags(long bookId) {
+        try {
+            JsonNode data = requestData("GET", "/books/" + bookId + "/tags", null);
+            JsonNode payload = firstPresent(data, "data", "tags", "tagList", "tagNames");
+            if (payload != null && payload.isArray()) {
+                return parseStringList(payload);
+            }
+            if (payload != null && payload.isObject()) {
+                return parseStringList(firstPresent(payload, "tags", "tagList", "tagNames"));
+            }
+            if (data != null && data.isArray()) {
+                return parseStringList(data);
+            }
+            return parseStringList(payload);
+        } catch (Exception ex) {
             return List.of();
         }
-        return List.of(summary.split(","))
+    }
+
+    private List<String> parseStringListFromSummary(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return List.of(value.trim().split("\\s+"))
                 .stream()
                 .map(String::trim)
                 .filter(tag -> !tag.isBlank())
+                .distinct()
                 .toList();
     }
 
-    private boolean isCollected(int bookId) {
+    private List<String> parseTagInput(String tagsText) {
+        if (tagsText == null || tagsText.isBlank()) {
+            return List.of();
+        }
+        return List.of(tagsText.trim().split("\\s+"))
+                .stream()
+                .map(String::trim)
+                .filter(tag -> !tag.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private boolean isCollected(long bookId) {
         try {
             JsonNode data = requestData("GET", "/collections/check" + query(Map.of("bookId", bookId)), null);
-            return boolValue(data, false);
+            JsonNode value = firstPresent(data, "data", "result", "value", "collected");
+            return value != null && (value.isBoolean() ? value.asBoolean() : Boolean.parseBoolean(value.asText()));
         } catch (Exception ex) {
             return false;
         }
     }
 
-    private RatingSummary fetchRatingSummary(int bookId, String currentUser) {
+    private boolean isCollected(int bookId) {
+        return isCollected((long) bookId);
+    }
+
+    private RatingSummary fetchRatingSummary(long bookId, String currentUser) {
         try {
             JsonNode data = requestData("GET", "/ratings/book/" + bookId + "/stats", null);
             return parseRatingSummary(data, bookId, currentUser);
         } catch (Exception ex) {
-            return new RatingSummary(0, 0, defaultDistribution(), null);
+            return null;
         }
     }
 
-    private RatingSummary parseRatingSummary(JsonNode node, int bookId, String currentUser) {
+    private RatingSummary parseRatingSummary(JsonNode node, long bookId, String currentUser) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
         }
-        double avg = doubleValue(firstPresent(node, "avgScore", "average", "avgRating"), 0d);
-        int count = intValue(firstPresent(node, "ratingCount", "count"), 0);
-        Map<Integer, Integer> dist = defaultDistribution();
-        JsonNode distribution = firstPresent(node, "distribution");
-        if (distribution != null && distribution.isObject()) {
-            distribution.fields().forEachRemaining(entry -> {
-                try {
-                    dist.put(Integer.parseInt(entry.getKey()), entry.getValue().asInt());
-                } catch (NumberFormatException ignore) {
-                }
-            });
+        double avg = doubleValue(firstPresent(node, "average", "avg", "avgScore", "averageScore"), 0D);
+        int count = intValue(firstPresent(node, "count", "ratingCount", "total"), 0);
+        Map<Integer, Integer> distribution = defaultDistribution();
+        JsonNode distNode = firstPresent(node, "distribution", "ratingDistribution");
+        if (distNode != null && distNode.isObject()) {
+            for (int i = 1; i <= 10; i++) {
+                distribution.put(i, intValue(distNode.get(String.valueOf(i)), 0));
+            }
         }
-
         Integer myScore = null;
         try {
             JsonNode my = requestData("GET", "/ratings/my" + query(Map.of("bookId", bookId)), null);
-            myScore = intNullable(firstPresent(my, "score", "data"));
+            myScore = intNullable(firstPresent(my, "score", "myScore", "data"));
         } catch (Exception ignore) {
         }
-        return new RatingSummary(avg, count, dist, myScore);
-    }
-
-    private Book parseBook(JsonNode node, int fallbackId) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return null;
-        }
-        int id = intValue(firstPresent(node, "id"), fallbackId);
-        String title = safe(text(firstPresent(node, "title")));
-        String author = safe(text(firstPresent(node, "author")));
-        String intro = safe(text(firstPresent(node, "description", "intro")));
-        List<String> tags = parseStringList(firstPresent(node, "tags"));
-        if (tags.isEmpty()) {
-            JsonNode bookInfo = firstPresent(node, "bookInfo");
-            if (bookInfo != null && bookInfo != node) {
-                tags = parseStringList(firstPresent(bookInfo, "tags"));
-            }
-        }
-        return new Book(id, title, author, intro, tags);
-    }
-
-    private UserBookList parseBookListDetail(JsonNode node, String ownerFallback) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return null;
-        }
-        JsonNode listNode = firstPresent(node, "bookList", "book_list", "data");
-        if (listNode == null || listNode.isMissingNode() || listNode.isNull()) {
-            listNode = node;
-        }
-        long id = longValue(listNode, "id", longValue(node, "id", 0L));
-        String owner = text(firstPresent(listNode, "owner", "username"));
-        if (owner == null || owner.isBlank()) {
-            owner = ownerFallback;
-        }
-        String title = safe(text(firstPresent(listNode, "title")));
-        String intro = safe(text(firstPresent(listNode, "description", "intro")));
-        List<Integer> bookIds = new ArrayList<>();
-        JsonNode booksNode = firstPresent(node, "books", "items");
-        if (booksNode != null && booksNode.isArray()) {
-            for (JsonNode book : booksNode) {
-                int bookId = intValue(firstPresent(book, "id"), -1);
-                if (bookId > 0) {
-                    bookIds.add(bookId);
-                }
-            }
-        }
-        JsonNode idsNode = firstPresent(listNode, "bookIds", "book_ids");
-        if (bookIds.isEmpty() && idsNode != null && idsNode.isArray()) {
-            for (JsonNode item : idsNode) {
-                bookIds.add(item.asInt());
-            }
-        }
-        return new UserBookList(id, owner, title, intro, bookIds);
-    }
-
-    private List<UserBookList> parseBookLists(JsonNode node, String ownerFallback) {
-        List<UserBookList> result = new ArrayList<>();
-        for (JsonNode item : elements(node)) {
-            UserBookList list = parseBookListDetail(item, ownerFallback);
-            if (list != null) {
-                result.add(list);
-            }
-        }
-        return result;
+        return new RatingSummary(avg, count, distribution, myScore);
     }
 
     private List<CommentItem> parseComments(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return List.of();
+        }
         List<CommentItem> result = new ArrayList<>();
-        for (JsonNode item : elements(node)) {
-            CommentItem itemModel = parseComment(item, currentUsername == null ? "" : currentUsername);
-            if (itemModel != null) {
-                result.add(itemModel);
+        JsonNode data = node.isArray() ? node : firstPresent(node, "records", "list", "data", "comments");
+        if (data != null && data.isArray()) {
+            for (JsonNode item : data) {
+                long id = longValue(firstPresent(item, "id", "commentId"), 0L);
+                if (id <= 0) {
+                    continue;
+                }
+                String content = safe(text(firstPresent(item, "content", "text")));
+                String user = safe(text(firstPresent(item, "username", "user", "nickname")));
+                LocalDateTime time = parseDateTime(text(firstPresent(item, "createTime", "time", "createdAt")));
+                Long parentId = longNullable(firstPresent(item, "parentId", "replyTo"));
+                result.add(new CommentItem(id, user, content, time, parentId, 0, 0));
             }
         }
         return result;
     }
 
-    private CommentItem parseComment(JsonNode node, String defaultUser) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return null;
+    private List<JsonNode> pageRecords(JsonNode page) {
+        if (page == null || page.isMissingNode() || page.isNull()) {
+            return List.of();
         }
-        long id = longValue(node, "id", System.currentTimeMillis());
-        String user = text(firstPresent(node, "user", "username", "userName"));
-        if (user == null || user.isBlank()) {
-            Long userId = longValue(firstPresent(node, "userId"), null);
-            if (userId != null) {
-                try {
-                    user = resolveUsername(userId);
-                } catch (Exception ignore) {
-                }
-            }
+        JsonNode records = firstPresent(page, "records", "list", "items", "data");
+        if (records != null && records.isArray()) {
+            List<JsonNode> result = new ArrayList<>();
+            records.forEach(result::add);
+            return result;
         }
-        if (user == null || user.isBlank()) {
-            user = defaultUser == null ? "" : defaultUser;
+        if (page.isArray()) {
+            List<JsonNode> result = new ArrayList<>();
+            page.forEach(result::add);
+            return result;
         }
-        String content = safe(text(firstPresent(node, "content")));
-        LocalDateTime time = parseDateTime(firstPresent(node, "time", "createTime"));
-        Long parentId = longNullable(firstPresent(node, "parentId", "parentCommentId"));
-        int upVotes = intValue(firstPresent(node, "upVotes", "likeCount"), 0);
-        int downVotes = intValue(firstPresent(node, "downVotes", "dislikeCount"), 0);
-        return new CommentItem(id, user, content, time == null ? LocalDateTime.now() : time, parentId, upVotes, downVotes);
-    }
-
-    private JsonNode requestData(String method, String path, String body) throws IOException, InterruptedException {
-        String response = apiClient.send(method, path, body);
-        if (response == null || response.isBlank()) {
-            return mapper.nullNode();
-        }
-        JsonNode envelope = mapper.readTree(response);
-        int code = intValue(firstPresent(envelope, "code"), 200);
-        if (code != 200) {
-            throw new RemoteApiException(text(firstPresent(envelope, "msg", "message")));
-        }
-        return firstPresent(envelope, "data", "result");
+        return List.of();
     }
 
     private JsonNode requestPageData(String path) throws IOException, InterruptedException {
-        return requestData("GET", path, null);
+        return requestJson("GET", path, null);
     }
 
-    private List<JsonNode> pageRecords(JsonNode pageNode) {
-        JsonNode records = firstPresent(pageNode, "records", "items", "list");
-        return elements(records);
+    private JsonNode requestData(String method, String path, String body) throws IOException, InterruptedException {
+        return requestJson(method, path, body);
     }
 
-    private List<JsonNode> elements(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return List.of();
+    private JsonNode requestJson(String method, String path, String body) throws IOException, InterruptedException {
+        String response = apiClient.send(method, path, body);
+        JsonNode node = mapper.readTree(response);
+        JsonNode codeNode = firstPresent(node, "code", "status");
+        if (codeNode != null && codeNode.isNumber() && codeNode.asInt() != 200) {
+            String message = text(firstPresent(node, "message", "msg", "errorMessage"));
+            throw new IllegalStateException(message == null || message.isBlank() ? "远程接口请求失败" : message);
         }
-        JsonNode source = node;
-        if (!source.isArray()) {
-            JsonNode records = firstPresent(source, "records", "items", "list", "data");
-            if (records != null) {
-                source = records;
-            }
-        }
-        if (source == null || !source.isArray()) {
-            return List.of();
-        }
-        List<JsonNode> result = new ArrayList<>();
-        source.forEach(result::add);
-        return result;
+        JsonNode data = firstPresent(node, "data", "result");
+        return data == null ? node : data;
     }
 
-    private <T> T remoteOrFallback(CheckedSupplier<T> remote, Supplier<T> fallback) {
+    private Role remoteLogin(String username, String password) throws IOException, InterruptedException {
+        JsonNode data = requestData("POST", "/users/login", json(Map.of(
+                "username", username,
+                "password", password
+        )));
+        JsonNode userInfo = firstPresent(data, "userInfo", "user", "data");
+        if (userInfo == null) {
+            userInfo = data;
+        }
+        currentUserId = longNullable(firstPresent(userInfo, "id", "userId"));
+        currentUsername = safe(text(firstPresent(userInfo, "username", "name")));
+        Role role = parseRole(text(firstPresent(userInfo, "role", "userRole")));
+        if (currentUsername != null && currentUserId != null) {
+            // remote user id may be used later by id-based endpoints
+        }
+        if (role == null) {
+            role = parseRole(text(firstPresent(data, "role")));
+        }
+        if (role == null) {
+            throw new IllegalStateException("登录响应缺少角色信息");
+        }
+        return role;
+    }
+
+    private void remoteUpdateProfile(String currentUsername, String newUsername, String newPassword) throws IOException, InterruptedException {
+        JsonNode payload = requestData("PUT", "/users/profile", json(mapOf(
+                "currentUsername", currentUsername,
+                "newUsername", newUsername,
+                "newPassword", newPassword
+        )));
+        if (payload == null) {
+            requestData("PUT", "/users/me", json(mapOf(
+                    "username", currentUsername,
+                    "newUsername", newUsername,
+                    "newPassword", newPassword
+            )));
+        }
+    }
+
+    private String json(Object value) {
+        try {
+            return mapper.writeValueAsString(value);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private <T> T remoteOrFallback(ThrowingSupplier<T> remote, Supplier<T> fallback) {
         try {
             return remote.get();
-        } catch (RemoteApiException ex) {
-            throw ex;
         } catch (Exception ex) {
             return fallback.get();
         }
     }
 
-    private void mirror(Runnable action) {
+    private void runRemoteOrFallback(ThrowingRunnable remote, Runnable fallback) {
         try {
-            action.run();
-        } catch (Exception ignore) {
-        }
-    }
-
-    private Long requireCurrentUserId() {
-        if (currentUserId != null) {
-            return currentUserId;
-        }
-        try {
-            JsonNode data = requestData("GET", "/users/me", null);
-            currentUserId = longValue(firstPresent(data, "id"), null);
-            if (currentUsername == null) {
-                currentUsername = text(firstPresent(data, "username"));
-            }
+            remote.run();
         } catch (Exception ex) {
-            throw new RemoteApiException("请先登录");
+            fallback.run();
         }
-        if (currentUserId == null) {
-            throw new RemoteApiException("请先登录");
-        }
-        return currentUserId;
     }
 
-    private long resolveUserId(String username) throws IOException, InterruptedException {
+    @FunctionalInterface
+    private interface ThrowingSupplier<T> {
+        T get() throws Exception;
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable {
+        void run() throws Exception;
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private Role parseRole(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Role.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private Long resolveUserId(String username) {
         if (username == null || username.isBlank()) {
-            throw new RemoteApiException("用户名不能为空");
+            return null;
         }
         if (Objects.equals(username, currentUsername) && currentUserId != null) {
             return currentUserId;
         }
-        JsonNode data = requestData("GET", "/users/profile/" + encodePathSegment(username), null);
-        JsonNode userInfo = firstPresent(data, "userInfo", "user", "data");
-        if (userInfo == null || userInfo.isMissingNode() || userInfo.isNull()) {
-            throw new RemoteApiException("用户不存在");
+        if (userIdCache.containsKey(username)) {
+            return userIdCache.get(username);
         }
-        Long id = longValue(userInfo, "id", null);
-        if (id == null) {
-            throw new RemoteApiException("用户不存在");
+        String[] candidates = {
+                "/users/profile" + query(Map.of("username", username)),
+                "/users/by-username/" + username,
+                "/users/" + username
+        };
+        for (String path : candidates) {
+            try {
+                JsonNode data = requestData("GET", path, null);
+                Long id = longNullable(firstPresent(data, "id", "userId"));
+                if (id == null || id <= 0) {
+                    JsonNode userInfo = firstPresent(data, "userInfo", "user", "data");
+                    id = longNullable(firstPresent(userInfo, "id", "userId"));
+                }
+                if (id != null && id > 0) {
+                    userIdCache.put(username, id);
+                    return id;
+                }
+            } catch (Exception ignore) {
+            }
         }
-        return id;
+        return null;
     }
 
-    private String resolveUsername(long userId) throws IOException, InterruptedException {
-        if (currentUserId != null && currentUserId == userId && currentUsername != null) {
-            return currentUsername;
+    private String resolveFollowQuery(String username) {
+        Long id = resolveUserId(username);
+        if (id != null) {
+            return query(Map.of("followeeId", id));
         }
-        JsonNode data = requestData("GET", "/users/" + userId, null);
-        JsonNode userInfo = firstPresent(data, "data", "user", "userInfo");
-        if (userInfo == null || userInfo.isMissingNode() || userInfo.isNull()) {
-            userInfo = data;
+        return query(Map.of("followeeUsername", username));
+    }
+
+    private String resolveMessageQuery(String peer, String content) {
+        Long id = resolveUserId(peer);
+        Map<String, Object> params = new LinkedHashMap<>();
+        if (id != null) {
+            params.put("receiverId", id);
+        } else {
+            params.put("receiverUsername", peer);
         }
-        String username = text(firstPresent(userInfo, "username"));
-        if (username == null || username.isBlank()) {
-            throw new RemoteApiException("用户不存在");
+        params.put("content", content);
+        return query(params);
+    }
+
+    private String resolveConversationPeer(String peer) {
+        Long id = resolveUserId(peer);
+        return id == null ? peer : String.valueOf(id);
+    }
+
+    private CommentItem parseCommentItem(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
         }
-        return username;
+        long id = longValue(firstPresent(node, "id", "commentId"), 0L);
+        if (id <= 0) {
+            return null;
+        }
+        String user = safe(text(firstPresent(node, "user", "username", "nickname")));
+        String content = safe(text(firstPresent(node, "content", "text")));
+        LocalDateTime time = parseDateTime(text(firstPresent(node, "time", "createTime", "createdAt")));
+        Long parentId = longNullable(firstPresent(node, "parentId", "replyTo"));
+        int upVotes = intValue(firstPresent(node, "upVotes", "upvoteCount", "likes"), 0);
+        int downVotes = intValue(firstPresent(node, "downVotes", "downvoteCount", "dislikes"), 0);
+        return new CommentItem(id, user, content, time, parentId, upVotes, downVotes);
+    }
+
+    private UserBookList parseBookList(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        long id = longValue(firstPresent(node, "id", "listId"), 0L);
+        if (id <= 0) {
+            return null;
+        }
+        String owner = safe(text(firstPresent(node, "owner", "username", "user")));
+        String title = safe(text(firstPresent(node, "title")));
+        String intro = safe(text(firstPresent(node, "description", "intro")));
+        List<Long> bookIds = new ArrayList<>();
+        JsonNode ids = firstPresent(node, "bookIds", "bookIdList", "books");
+        if (ids != null && ids.isArray()) {
+            for (JsonNode item : ids) {
+                long bookId = longValue(item, 0L);
+                if (bookId > 0) {
+                    bookIds.add(bookId);
+                }
+            }
+        }
+        return new UserBookList(id, owner, title, intro, bookIds);
+    }
+
+    private FollowItem parseFollowItem(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        String username = safe(text(firstPresent(node, "username", "user", "followeeUsername", "nickname")));
+        return username.isBlank() ? null : new FollowItem(username);
+    }
+
+    private ConversationPreview parseConversationPreview(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        String peer = safe(text(firstPresent(node, "peer", "username", "user", "peerUsername")));
+        if (peer.isBlank()) {
+            return null;
+        }
+        String lastMessage = safe(text(firstPresent(node, "lastMessage", "content", "message")));
+        LocalDateTime time = parseDateTime(text(firstPresent(node, "lastTime", "time", "updatedAt")));
+        return new ConversationPreview(peer, lastMessage, time);
+    }
+
+    private MessageItem parseMessageItem(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        String from = safe(text(firstPresent(node, "from", "sender", "senderUsername")));
+        String to = safe(text(firstPresent(node, "to", "receiver", "receiverUsername")));
+        String content = safe(text(firstPresent(node, "content", "message")));
+        LocalDateTime time = parseDateTime(text(firstPresent(node, "time", "createTime", "createdAt")));
+        if (from.isBlank() || to.isBlank()) {
+            return null;
+        }
+        return new MessageItem(from, to, content, time);
+    }
+
+    private BanInfo parseBanInfo(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        String username = safe(text(firstPresent(node, "username", "user")));
+        LocalDateTime until = parseDateTime(text(firstPresent(node, "bannedUntil", "until")));
+        if (username.isBlank()) {
+            return null;
+        }
+        return new BanInfo(username, until);
+    }
+
+    private UserProfile parseUserProfile(JsonNode node, String target, String currentUser) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        String username = safe(text(firstPresent(node, "username", "user", "name")));
+        if (username.isBlank()) {
+            username = target;
+        }
+        List<CommentItem> comments = parseComments(firstPresent(node, "comments", "commentList", "records"));
+        List<UserBookList> lists = new ArrayList<>();
+        JsonNode listNode = firstPresent(node, "bookLists", "lists", "records");
+        if (listNode != null && listNode.isArray()) {
+            for (JsonNode item : listNode) {
+                UserBookList list = parseBookList(item);
+                if (list != null) {
+                    lists.add(list);
+                }
+            }
+        }
+        int followingCount = intValue(firstPresent(node, "followingCount", "following"), 0);
+        int followerCount = intValue(firstPresent(node, "followerCount", "followers"), 0);
+        boolean followed = false;
+        JsonNode followedNode = firstPresent(node, "followedByCurrentUser", "followed");
+        if (followedNode != null) {
+            followed = followedNode.isBoolean() ? followedNode.asBoolean() : Boolean.parseBoolean(followedNode.asText());
+        }
+        return new UserProfile(username, comments, lists, followingCount, followerCount, followed);
+    }
+
+    private boolean containsKeyword(String text, String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return true;
+        }
+        return text != null && text.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
+    }
+
+    private String text(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        return node.asText();
+    }
+
+    private long longValue(JsonNode node, long defaultValue) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return defaultValue;
+        }
+        return node.asLong(defaultValue);
+    }
+
+    private int intValue(JsonNode node, int defaultValue) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return defaultValue;
+        }
+        return node.asInt(defaultValue);
+    }
+
+    private Integer intNullable(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        return node.asInt();
+    }
+
+    private Long longNullable(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        return node.asLong();
+    }
+
+    private double doubleValue(JsonNode node, double defaultValue) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return defaultValue;
+        }
+        return node.asDouble(defaultValue);
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return LocalDateTime.now();
+        }
+        try {
+            return LocalDateTime.parse(value);
+        } catch (Exception ex) {
+            return LocalDateTime.now();
+        }
     }
 
     private JsonNode firstPresent(JsonNode node, String... names) {
@@ -982,11 +1144,6 @@ public class RemoteBackendService extends MockBackendService {
         return result;
     }
 
-    private List<String> parseTagsFromDetail(JsonNode node) {
-        JsonNode tags = firstPresent(node, "tags");
-        return parseStringList(tags);
-    }
-
     private String formatAvg(RatingSummary summary) {
         if (summary == null || summary.count() <= 0) {
             return "暂无评分";
@@ -1013,120 +1170,5 @@ public class RemoteBackendService extends MockBackendService {
             map.put(String.valueOf(pairs[i]), pairs[i + 1]);
         }
         return map;
-    }
-
-    private String json(Map<String, ?> value) {
-        try {
-            return mapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-            throw new RemoteApiException("JSON 序列化失败");
-        }
-    }
-
-    private String safe(String value) {
-        return value == null ? "" : value.trim();
-    }
-
-    private String text(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return null;
-        }
-        return node.asText();
-    }
-
-    private int intValue(JsonNode node, int fallback) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return fallback;
-        }
-        return node.asInt(fallback);
-    }
-
-    private Integer intNullable(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return null;
-        }
-        return node.asInt();
-    }
-
-    private Long longValue(JsonNode node, String field, Long fallback) {
-        return longValue(firstPresent(node, field), fallback);
-    }
-
-    private Long longValue(JsonNode node, Long fallback) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return fallback;
-        }
-        return node.asLong();
-    }
-
-    private long longValue(JsonNode node, String field, long fallback) {
-        JsonNode child = firstPresent(node, field);
-        return child == null || child.isMissingNode() || child.isNull() ? fallback : child.asLong(fallback);
-    }
-
-    private int intValue(JsonNode node, String field, int fallback) {
-        JsonNode child = firstPresent(node, field);
-        return child == null || child.isMissingNode() || child.isNull() ? fallback : child.asInt(fallback);
-    }
-
-    private Long longNullable(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return null;
-        }
-        return node.asLong();
-    }
-
-    private double doubleValue(JsonNode node, double fallback) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return fallback;
-        }
-        return node.asDouble(fallback);
-    }
-
-    private boolean boolValue(JsonNode node, boolean fallback) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return fallback;
-        }
-        return node.asBoolean(fallback);
-    }
-
-    private LocalDateTime parseDateTime(JsonNode node) {
-        String value = text(node);
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return LocalDateTime.parse(value);
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
-    private String encodePathSegment(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace("/", "%2F");
-    }
-
-    private Role parseRole(String role) {
-        if (role == null || role.isBlank()) {
-            return null;
-        }
-        try {
-            return Role.valueOf(role.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ex) {
-            return null;
-        }
-    }
-
-    private interface CheckedSupplier<T> {
-        T get() throws Exception;
-    }
-
-    private static class RemoteApiException extends RuntimeException {
-        private RemoteApiException(String message) {
-            super(message);
-        }
     }
 }

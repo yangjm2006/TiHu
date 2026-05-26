@@ -17,9 +17,10 @@
     <center>
         <TableView fx:id="favoritesTable">
             <columns>
-                <TableColumn fx:id="titleColumn" text="书名"/>
-                <TableColumn fx:id="authorColumn" text="作者"/>
-                <TableColumn fx:id="ratingColumn" text="平均评分"/>
+                <TableColumn fx:id="titleColumn" text="书名" prefWidth="220"/>
+                <TableColumn fx:id="authorColumn" text="作者" prefWidth="180"/>
+                <TableColumn fx:id="ratingColumn" text="平均评分" prefWidth="130"/>
+                <TableColumn fx:id="tagsColumn" text="标签摘要" prefWidth="320"/>
             </columns>
         </TableView>
     </center>

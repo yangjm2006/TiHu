@@ -16,6 +16,7 @@ public class AdminBooksController implements MainContentController {
     @FXML private TableColumn<MockBackendService.BookCard, String> titleColumn;
     @FXML private TableColumn<MockBackendService.BookCard, String> authorColumn;
     @FXML private TableColumn<MockBackendService.BookCard, String> ratingColumn;
+    @FXML private TableColumn<MockBackendService.BookCard, String> tagsColumn;
     @FXML private TextField titleField;
     @FXML private TextField authorField;
     @FXML private TextField tagsField;
@@ -23,13 +24,14 @@ public class AdminBooksController implements MainContentController {
     @FXML private Label messageLabel;
 
     private final AppContext context = AppContext.getInstance();
-    private Integer selectedBookId;
+    private Long selectedBookId;
 
     @FXML
     public void initialize() {
         titleColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().title()));
         authorColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().author()));
         ratingColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().averageScoreText()));
+        tagsColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().tagsSummary()));
 
         tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> fillForm(newValue));
     }
@@ -72,7 +74,7 @@ public class AdminBooksController implements MainContentController {
             messageLabel.setText("请先选择图书");
             return;
         }
-        context.service().deleteBook(selected.id());
+        context.service().deleteBook((long) selected.id());
         clearForm();
         refresh();
     }
@@ -83,12 +85,12 @@ public class AdminBooksController implements MainContentController {
             return;
         }
         selectedBookId = selected.id();
-        MockBackendService.Book book = context.service().getBook(selected.id());
+        MockBackendService.Book book = context.service().getBook((long) selected.id());
         titleField.setText(book.title());
         authorField.setText(book.author());
         introArea.setText(book.intro());
-        tagsField.setText(String.join(", ", book.tags()));
-        messageLabel.setText("已载入选中图书，可直接修改后点击更新");
+        tagsField.setText(String.join(" ", book.tags()));
+        messageLabel.setText("已载入选中图书，标签请用空格分隔后直接修改再更新");
     }
 
     private void clearForm() {

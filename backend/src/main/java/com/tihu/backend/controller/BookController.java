@@ -1,13 +1,16 @@
 package com.tihu.backend.controller;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tihu.backend.common.ApiException;
 import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.Book;
+import com.tihu.backend.dto.BookTagsRequest;
 import com.tihu.backend.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -66,6 +69,7 @@ public class BookController {
      * POST /api/books
      */
     @PostMapping
+    @Transactional(rollbackFor = Exception.class)
     public Result createBook(@RequestBody Book book) {
         requireTitle(book);
         normalizeTitle(book);
@@ -73,6 +77,9 @@ public class BookController {
             throw new ApiException(409, "书名已存在");
         }
         bookService.save(book);
+        if (book.getTags() != null) {
+            bookService.replaceBookTags(book.getId(), book.getTags());
+        }
         return Result.success(book);
     }
 
@@ -81,6 +88,7 @@ public class BookController {
      * PUT /api/books/{id}
      */
     @PutMapping("/{id}")
+    @Transactional(rollbackFor = Exception.class)
     public Result updateBook(@PathVariable Long id, @RequestBody Book book) {
         book.setId(id);
         requireTitle(book);
@@ -89,7 +97,30 @@ public class BookController {
             throw new ApiException(409, "书名已存在");
         }
         bookService.updateById(book);
+        if (book.getTags() != null) {
+            bookService.replaceBookTags(book.getId(), book.getTags());
+        }
         return Result.success();
+    }
+
+    /**
+     * 获取图书标签
+     * GET /api/books/{id}/tags
+     */
+    @GetMapping("/{id}/tags")
+    public Result getBookTags(@PathVariable Long id) {
+        return Result.success(bookService.getBookTags(id));
+    }
+
+    /**
+     * 替换图书标签（管理员）
+     * PUT /api/books/{id}/tags
+     */
+    @PutMapping("/{id}/tags")
+    public Result replaceBookTags(@PathVariable Long id, @RequestBody BookTagsRequest request) {
+        StpUtil.checkRole("ADMIN");
+        bookService.replaceBookTags(id, request == null ? null : request.getTags());
+        return Result.success(bookService.getBookTags(id));
     }
 
     /**

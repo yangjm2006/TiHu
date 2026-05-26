@@ -2,6 +2,7 @@ package com.tihu.frontend.controller;
 
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
@@ -14,6 +15,7 @@ public class FavoritesController implements MainContentController {
     @FXML private TableColumn<MockBackendService.BookCard, String> titleColumn;
     @FXML private TableColumn<MockBackendService.BookCard, String> authorColumn;
     @FXML private TableColumn<MockBackendService.BookCard, String> ratingColumn;
+    @FXML private TableColumn<MockBackendService.BookCard, String> tagsColumn;
     @FXML private Label messageLabel;
 
     private final AppContext context = AppContext.getInstance();
@@ -29,6 +31,13 @@ public class FavoritesController implements MainContentController {
         titleColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().title()));
         authorColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().author()));
         ratingColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().averageScoreText()));
+        tagsColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().tagsSummary()));
+
+        favoritesTable.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                onOpenDetail();
+            }
+        });
     }
 
     @Override
@@ -41,7 +50,7 @@ public class FavoritesController implements MainContentController {
     private void onOpenDetail() {
         MockBackendService.BookCard selected = favoritesTable.getSelectionModel().getSelectedItem();
         if (selected != null && mainController != null) {
-            mainController.openBookDetail(selected.id());
+            mainController.openBookDetail(selected.id(), BookDetailReturnTarget.FAVORITES);
         }
     }
 }
