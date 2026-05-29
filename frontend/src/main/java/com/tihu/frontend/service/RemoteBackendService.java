@@ -8,7 +8,7 @@ import com.tihu.frontend.request.ApiClient;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -98,16 +98,20 @@ public class RemoteBackendService extends MockBackendService {
                     book = new Book(book.id(), book.title(), book.author(), book.intro(), tags);
                 }
             }
-            RatingSummary summary = parseRatingSummary(firstPresent(data, "ratings", "ratingSummary", "data"), bookId, currentUser);
+            RatingSummary summary = parseRatingSummary(firstPresent(data, "ratings", "ratingSummary", "data"), bookId);
             if (summary == null) {
-                summary = fetchRatingSummary(bookId, currentUser);
+                summary = fetchRatingSummary(bookId);
             }
             List<CommentItem> comments = parseComments(firstPresent(data, "comments", "commentList", "data"));
             List<CommentItem> replies = parseComments(firstPresent(data, "replies", "replyList"));
             if (comments.isEmpty() && replies.isEmpty()) {
                 comments = parseComments(requestPageData("/comments/book/" + bookId + query(Map.of("page", 1, "size", 100))));
             }
-            return new BookDetail(book, summary, comments, replies);
+            int favoriteCount = intValue(firstPresent(data, "favoriteCount", "favoritesCount", "collectCount", "collectionCount", "collectedCount"));
+            if (favoriteCount <= 0) {
+                favoriteCount = fetchFavoriteCount(bookId);
+            }
+            return new BookDetail(book, summary, comments, replies, favoriteCount);
         }, () -> super.getBookDetail(bookId, currentUser));
     }
 
@@ -380,7 +384,7 @@ public class RemoteBackendService extends MockBackendService {
     public synchronized UserProfile getUserProfile(String target, String currentUser) {
         return remoteOrFallback(() -> {
             JsonNode data = requestData("GET", "/users/profile" + query(Map.of("username", target)), null);
-            UserProfile profile = parseUserProfile(data, target, currentUser);
+            UserProfile profile = parseUserProfile(data, target);
             return profile != null ? profile : super.getUserProfile(target, currentUser);
         }, () -> super.getUserProfile(target, currentUser));
     }
@@ -485,7 +489,7 @@ public class RemoteBackendService extends MockBackendService {
                 : requestPageData("/books" + query(Map.of("page", 1, "size", 1000)));
         List<BookCard> result = new ArrayList<>();
         for (JsonNode item : pageRecords(page)) {
-            BookCard card = parseBookCard(item, currentUsername);
+            BookCard card = parseBookCard(item);
             if (card == null) {
                 continue;
             }
@@ -501,17 +505,17 @@ public class RemoteBackendService extends MockBackendService {
                         if (cardTags.isEmpty()) {
                             return false;
                         }
-                        return lowerNeed.stream().allMatch(tag -> cardTags.stream()
+                        return cardTags.stream()
                                 .map(v -> v.toLowerCase(Locale.ROOT))
                                 .collect(Collectors.toSet())
-                                .contains(tag));
+                                .containsAll(lowerNeed);
                     })
                     .toList();
         }
         return result;
     }
 
-    private BookCard parseBookCard(JsonNode item, String currentUser) throws IOException, InterruptedException {
+    private BookCard parseBookCard(JsonNode item) {
         if (item == null || item.isMissingNode() || item.isNull()) {
             return null;
         }
@@ -541,16 +545,16 @@ public class RemoteBackendService extends MockBackendService {
         if (tags.isEmpty()) {
             tags = fetchBookTags(bookId);
         }
-        RatingSummary summary = parseRatingSummary(item, bookId, currentUser);
+        RatingSummary summary = parseRatingSummary(item, bookId);
         JsonNode nestedRatings = firstPresent(item, "ratings", "ratingSummary");
         if (nestedRatings != null) {
-            RatingSummary nestedSummary = parseRatingSummary(nestedRatings, bookId, currentUser);
+            RatingSummary nestedSummary = parseRatingSummary(nestedRatings, bookId);
             if (nestedSummary != null && (summary == null || nestedSummary.count() > 0)) {
                 summary = nestedSummary;
             }
         }
         if (summary == null || summary.count() == 0) {
-            summary = fetchRatingSummary(bookId, currentUser);
+            summary = fetchRatingSummary(bookId);
         }
         if (title == null) {
             title = "";
@@ -561,15 +565,15 @@ public class RemoteBackendService extends MockBackendService {
         return new BookCard(bookId, title, author, String.join(" ", tags), formatAvg(summary));
     }
 
-    private BookCard parseFavoriteCard(JsonNode item, String username) throws IOException, InterruptedException {
+    private BookCard parseFavoriteCard(JsonNode item, String username) {
         if (item == null || item.isMissingNode() || item.isNull()) {
             return null;
         }
         String owner = safe(text(firstPresent(item, "owner", "username", "user", "nickname")));
-        if (owner != null && !owner.isBlank() && username != null && !username.isBlank() && !owner.equals(username)) {
+        if (!owner.isBlank() && username != null && !username.isBlank() && !owner.equals(username)) {
             return null;
         }
-        BookCard card = parseBookCard(item, username);
+        BookCard card = parseBookCard(item);
         if (card != null) {
             return card;
         }
@@ -608,9 +612,9 @@ public class RemoteBackendService extends MockBackendService {
             }
         }
 
-        RatingSummary summary = parseRatingSummary(item, bookId, username);
+        RatingSummary summary = parseRatingSummary(item, bookId);
         if (summary == null || summary.count() == 0) {
-            summary = fetchRatingSummary(bookId, username);
+            summary = fetchRatingSummary(bookId);
         }
         return new BookCard(bookId, title, author, String.join(" ", tags), formatAvg(summary));
     }
@@ -665,8 +669,7 @@ public class RemoteBackendService extends MockBackendService {
         if (value == null || value.isBlank()) {
             return List.of();
         }
-        return List.of(value.trim().split("\\s+"))
-                .stream()
+        return Arrays.stream(value.trim().split("\\s+"))
                 .map(String::trim)
                 .filter(tag -> !tag.isBlank())
                 .distinct()
@@ -677,8 +680,7 @@ public class RemoteBackendService extends MockBackendService {
         if (tagsText == null || tagsText.isBlank()) {
             return List.of();
         }
-        return List.of(tagsText.trim().split("\\s+"))
-                .stream()
+        return Arrays.stream(tagsText.trim().split("\\s+"))
                 .map(String::trim)
                 .filter(tag -> !tag.isBlank())
                 .distinct()
@@ -695,30 +697,57 @@ public class RemoteBackendService extends MockBackendService {
         }
     }
 
-    private boolean isCollected(int bookId) {
-        return isCollected((long) bookId);
-    }
-
-    private RatingSummary fetchRatingSummary(long bookId, String currentUser) {
+    private RatingSummary fetchRatingSummary(long bookId) {
         try {
             JsonNode data = requestData("GET", "/ratings/book/" + bookId + "/stats", null);
-            return parseRatingSummary(data, bookId, currentUser);
+            return parseRatingSummary(data, bookId);
         } catch (Exception ex) {
             return null;
         }
     }
 
-    private RatingSummary parseRatingSummary(JsonNode node, long bookId, String currentUser) {
+    private int fetchFavoriteCount(long bookId) {
+        try {
+            JsonNode page = requestPageData("/collections" + query(Map.of("page", 1, "size", 1000)));
+            int count = 0;
+            for (JsonNode item : pageRecords(page)) {
+                if (matchesBookId(item, bookId)) {
+                    count++;
+                }
+            }
+            return count;
+        } catch (Exception ex) {
+            return 0;
+        }
+    }
+
+    private boolean matchesBookId(JsonNode node, long bookId) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return false;
+        }
+        Long value = longNullable(firstPresent(node, "bookId", "book_id", "id"));
+        if (value != null && value == bookId) {
+            return true;
+        }
+        JsonNode bookInfo = firstPresent(node, "bookInfo", "book", "data");
+        if (bookInfo != null && bookInfo != node) {
+            Long nested = longNullable(firstPresent(bookInfo, "bookId", "book_id", "id"));
+            return nested != null && nested == bookId;
+        }
+        return false;
+    }
+
+    private RatingSummary parseRatingSummary(JsonNode node, long bookId) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
         }
-        double avg = doubleValue(firstPresent(node, "average", "avg", "avgScore", "averageScore"), 0D);
-        int count = intValue(firstPresent(node, "count", "ratingCount", "total"), 0);
+        double avg = doubleValue(firstPresent(node, "average", "avg", "avgScore", "averageScore"));
+        int count = intValue(firstPresent(node, "count", "ratingCount", "total"));
         Map<Integer, Integer> distribution = defaultDistribution();
         JsonNode distNode = firstPresent(node, "distribution", "ratingDistribution");
         if (distNode != null && distNode.isObject()) {
             for (int i = 1; i <= 10; i++) {
-                distribution.put(i, intValue(distNode.get(String.valueOf(i)), 0));
+                distribution.put(i, intValue(distNode.get(String.valueOf(i))));
             }
         }
         Integer myScore = null;
@@ -802,9 +831,6 @@ public class RemoteBackendService extends MockBackendService {
         currentUserId = longNullable(firstPresent(userInfo, "id", "userId"));
         currentUsername = safe(text(firstPresent(userInfo, "username", "name")));
         Role role = parseRole(text(firstPresent(userInfo, "role", "userRole")));
-        if (currentUsername != null && currentUserId != null) {
-            // remote user id may be used later by id-based endpoints
-        }
         if (role == null) {
             role = parseRole(text(firstPresent(data, "role")));
         }
@@ -948,8 +974,8 @@ public class RemoteBackendService extends MockBackendService {
         String content = safe(text(firstPresent(node, "content", "text")));
         LocalDateTime time = parseDateTime(text(firstPresent(node, "time", "createTime", "createdAt")));
         Long parentId = longNullable(firstPresent(node, "parentId", "replyTo"));
-        int upVotes = intValue(firstPresent(node, "upVotes", "upvoteCount", "likes"), 0);
-        int downVotes = intValue(firstPresent(node, "downVotes", "downvoteCount", "dislikes"), 0);
+        int upVotes = intValue(firstPresent(node, "upVotes", "upvoteCount", "likes"));
+        int downVotes = intValue(firstPresent(node, "downVotes", "downvoteCount", "dislikes"));
         return new CommentItem(id, user, content, time, parentId, upVotes, downVotes);
     }
 
@@ -1024,7 +1050,7 @@ public class RemoteBackendService extends MockBackendService {
         return new BanInfo(username, until);
     }
 
-    private UserProfile parseUserProfile(JsonNode node, String target, String currentUser) {
+    private UserProfile parseUserProfile(JsonNode node, String target) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
         }
@@ -1043,8 +1069,8 @@ public class RemoteBackendService extends MockBackendService {
                 }
             }
         }
-        int followingCount = intValue(firstPresent(node, "followingCount", "following"), 0);
-        int followerCount = intValue(firstPresent(node, "followerCount", "followers"), 0);
+        int followingCount = intValue(firstPresent(node, "followingCount", "following"));
+        int followerCount = intValue(firstPresent(node, "followerCount", "followers"));
         boolean followed = false;
         JsonNode followedNode = firstPresent(node, "followedByCurrentUser", "followed");
         if (followedNode != null) {
@@ -1074,11 +1100,11 @@ public class RemoteBackendService extends MockBackendService {
         return node.asLong(defaultValue);
     }
 
-    private int intValue(JsonNode node, int defaultValue) {
+    private int intValue(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
-            return defaultValue;
+            return 0;
         }
-        return node.asInt(defaultValue);
+        return node.asInt();
     }
 
     private Integer intNullable(JsonNode node) {
@@ -1095,11 +1121,11 @@ public class RemoteBackendService extends MockBackendService {
         return node.asLong();
     }
 
-    private double doubleValue(JsonNode node, double defaultValue) {
+    private double doubleValue(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
-            return defaultValue;
+            return 0D;
         }
-        return node.asDouble(defaultValue);
+        return node.asDouble();
     }
 
     private LocalDateTime parseDateTime(String value) {
@@ -1160,8 +1186,7 @@ public class RemoteBackendService extends MockBackendService {
     }
 
     private String query(Map<String, ?> params) {
-        String q = ApiClient.encodeQuery(params);
-        return q == null ? "" : q;
+        return ApiClient.encodeQuery(params);
     }
 
     private Map<String, Object> mapOf(Object... pairs) {

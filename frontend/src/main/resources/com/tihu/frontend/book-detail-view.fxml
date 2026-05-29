@@ -31,6 +31,7 @@
 
                 <Label text="评分汇总" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
                 <Label fx:id="ratingSummaryLabel" text="平均分：暂无评分"/>
+                <Label fx:id="favoriteCountLabel" text="收藏人数：0人"/>
                 <TextArea fx:id="distributionArea"
                           editable="false"
                           wrapText="true"

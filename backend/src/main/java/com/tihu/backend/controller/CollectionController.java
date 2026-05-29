@@ -9,6 +9,9 @@ import com.tihu.backend.service.CollectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 收藏相关接口
  */
@@ -60,7 +63,10 @@ public class CollectionController {
     public Result checkCollected(@RequestParam Long bookId) {
         Long userId = Long.parseLong(StpUtil.getLoginId().toString());
         boolean collected = collectionService.isCollected(userId, bookId);
-        return Result.success(collected);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("collected", collected);
+        return Result.success(data);
     }
 }
 

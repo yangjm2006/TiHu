@@ -168,21 +168,13 @@ GET /api/collections/check?bookId=101
 {
   "code": 200,
   "message": "OK",
-  "data": true
-}
-```
-
-也可兼容：
-
-```json
-{
-  "code": 200,
-  "message": "OK",
   "data": {
     "collected": true
   }
 }
 ```
+
+前端也兼容直接返回布尔值，但推荐统一使用 `data.collected`。
 
 ---
 

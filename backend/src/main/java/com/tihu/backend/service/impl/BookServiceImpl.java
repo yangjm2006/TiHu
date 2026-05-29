@@ -6,9 +6,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tihu.backend.common.ApiException;
 import com.tihu.backend.entity.Book;
 import com.tihu.backend.entity.BookTag;
+import com.tihu.backend.entity.Collection;
 import com.tihu.backend.entity.Tag;
 import com.tihu.backend.mapper.BookMapper;
 import com.tihu.backend.mapper.BookTagMapper;
+import com.tihu.backend.mapper.CollectionMapper;
 import com.tihu.backend.service.BookService;
 import com.tihu.backend.service.RatingService;
 import com.tihu.backend.service.TagService;
@@ -36,6 +38,9 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
 
     @Autowired
     private BookTagMapper bookTagMapper;
+
+    @Autowired
+    private CollectionMapper collectionMapper;
 
 
     @Override
@@ -189,11 +194,19 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
 
         // 返回包含评分统计的详情对象
         Object ratingStats = ratingService.getRatingStats(bookId);
+        Long favoriteCount = collectionMapper.selectCount(
+                new LambdaQueryWrapper<Collection>().eq(Collection::getBookId, bookId)
+        );
 
         Map<String, Object> detail = new HashMap<>();
         detail.put("bookInfo", book);
         detail.put("ratings", ratingStats);
         detail.put("tags", book.getTags());
+        detail.put("favoriteCount", favoriteCount);
+        detail.put("favoritesCount", favoriteCount);
+        detail.put("collectCount", favoriteCount);
+        detail.put("collectionCount", favoriteCount);
+        detail.put("collectedCount", favoriteCount);
         return detail;
     }
 

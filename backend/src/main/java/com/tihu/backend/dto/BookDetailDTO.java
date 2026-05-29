@@ -16,6 +16,11 @@ import java.util.Map;
 public class BookDetailDTO {
     private Map<String, Object> bookInfo;      // 图书基本信息
     private Map<String, Object> ratings;       // 评分统计（平均分、总数、分布、我的评分）
+    private Long favoriteCount;               // 收藏人数（去重用户数）
+    private Long favoritesCount;               // 收藏人数别名
+    private Long collectCount;                // 收藏人数别名
+    private Long collectionCount;             // 收藏人数别名
+    private Long collectedCount;              // 收藏人数别名
     private List<?> comments;                  // 一级评论列表
     private List<?> replies;                   // 二级回复列表
 }

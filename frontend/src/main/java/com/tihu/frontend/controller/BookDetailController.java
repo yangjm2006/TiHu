@@ -24,6 +24,7 @@ public class BookDetailController implements MainContentController {
     @FXML private Label metaLabel;
     @FXML private TextArea descArea;
     @FXML private Label ratingSummaryLabel;
+    @FXML private Label favoriteCountLabel;
     @FXML private TextArea distributionArea;
     @FXML private Spinner<Integer> myScoreSpinner;
     @FXML private ListView<String> commentListView;
@@ -170,6 +171,9 @@ public class BookDetailController implements MainContentController {
         MockBackendService.RatingSummary summary = detail.ratingSummary();
         String avgText = summary.count() == 0 ? "暂无评分" : String.format("%.1f", summary.average());
         ratingSummaryLabel.setText("平均分：" + avgText + "（" + summary.count() + "人）");
+        if (favoriteCountLabel != null) {
+            favoriteCountLabel.setText("收藏人数：" + detail.favoriteCount() + "人");
+        }
         distributionArea.setText(formatDistribution(summary.distribution()));
         if (summary.myScore() != null) {
             myScoreSpinner.getValueFactory().setValue(summary.myScore());

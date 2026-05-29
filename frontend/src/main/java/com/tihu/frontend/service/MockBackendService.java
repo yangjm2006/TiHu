@@ -45,7 +45,7 @@ public class MockBackendService {
     public record CommentItem(long id, String user, String content, LocalDateTime time, Long parentId, int upVotes, int downVotes) {
     }
 
-    public record BookDetail(Book book, RatingSummary ratingSummary, List<CommentItem> comments, List<CommentItem> replies) {
+    public record BookDetail(Book book, RatingSummary ratingSummary, List<CommentItem> comments, List<CommentItem> replies, int favoriteCount) {
     }
 
     public record UserBookList(long id, String owner, String title, String intro, List<Long> bookIds) {
@@ -550,6 +550,9 @@ public class MockBackendService {
     private BookDetail buildBookDetail(long bookId, String currentUser) {
         Book book = getBookInternal(bookId);
         RatingSummary summary = ratingSummary(bookId, currentUser);
+        int favoriteCount = (int) favoriteMap.values().stream()
+                .filter(set -> set.contains(bookId))
+                .count();
 
         List<CommentItem> allComments = commentMap.getOrDefault(bookId, List.of()).stream()
                 .sorted(Comparator.comparing(CommentItem::time).reversed())
@@ -557,7 +560,7 @@ public class MockBackendService {
 
         List<CommentItem> comments = allComments.stream().filter(item -> item.parentId() == null).toList();
         List<CommentItem> replies = allComments.stream().filter(item -> item.parentId() != null).toList();
-        return new BookDetail(book, summary, comments, replies);
+        return new BookDetail(book, summary, comments, replies, favoriteCount);
     }
 
     private void rateBookInternal(long bookId, String username, int score) {
