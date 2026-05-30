@@ -24,6 +24,10 @@ public class MainController {
     private final AppContext context = AppContext.getInstance();
     private Object currentContentController;
 
+    public Object currentContentController() {
+        return currentContentController;
+    }
+
     @FXML
     public void initialize() {
         refreshUserInfo();

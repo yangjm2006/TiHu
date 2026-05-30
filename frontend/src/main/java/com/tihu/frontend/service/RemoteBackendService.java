@@ -132,6 +132,24 @@ public class RemoteBackendService extends MockBackendService {
     }
 
     @Override
+    public synchronized BookListPage listBooks(String titleKeyword, List<String> tags, int page, int pageSize) {
+        return listBooks(titleKeyword, tags, page, pageSize, BookSortMode.DEFAULT);
+    }
+
+    public synchronized BookListPage listBooks(String titleKeyword, List<String> tags, int page, int pageSize, BookSortMode sortMode) {
+        return remoteOrFallback(() -> {
+            List<BookCard> catalog = fetchCatalog(titleKeyword, tags, sortMode);
+            int safePage = Math.max(1, page);
+            int safePageSize = Math.max(1, pageSize);
+            int totalItems = catalog.size();
+            int totalPages = Math.max(1, (int) Math.ceil(totalItems / (double) safePageSize));
+            int from = Math.min((safePage - 1) * safePageSize, totalItems);
+            int to = Math.min(from + safePageSize, totalItems);
+            return new BookListPage(new ArrayList<>(catalog.subList(from, to)), safePage, totalPages, totalItems);
+        }, () -> super.listBooks(titleKeyword, tags, page, pageSize));
+    }
+
+    @Override
     public synchronized void toggleFavorite(String username, long bookId) {
         runRemoteOrFallback(() -> {
             boolean collected = isCollected(bookId);
@@ -158,19 +176,6 @@ public class RemoteBackendService extends MockBackendService {
         return isCollected(username, (long) bookId);
     }
 
-    @Override
-    public synchronized BookListPage listBooks(String titleKeyword, List<String> tags, int page, int pageSize) {
-        return remoteOrFallback(() -> {
-            List<BookCard> catalog = fetchCatalog(titleKeyword, tags);
-            int safePage = Math.max(1, page);
-            int safePageSize = Math.max(1, pageSize);
-            int totalItems = catalog.size();
-            int totalPages = Math.max(1, (int) Math.ceil(totalItems / (double) safePageSize));
-            int from = Math.min((safePage - 1) * safePageSize, totalItems);
-            int to = Math.min(from + safePageSize, totalItems);
-            return new BookListPage(new ArrayList<>(catalog.subList(from, to)), safePage, totalPages, totalItems);
-        }, () -> super.listBooks(titleKeyword, tags, page, pageSize));
-    }
 
     @Override
     public synchronized void updateBook(long bookId, String title, String author, String intro, String tagsText) {
@@ -482,11 +487,12 @@ public class RemoteBackendService extends MockBackendService {
         }, () -> super.listFavorites(username));
     }
 
-    private List<BookCard> fetchCatalog(String titleKeyword, List<String> tags) throws IOException, InterruptedException {
+    private List<BookCard> fetchCatalog(String titleKeyword, List<String> tags, BookSortMode sortMode) throws IOException, InterruptedException {
         boolean needTags = tags != null && !tags.isEmpty();
+        String sortParam = sortParam(sortMode);
         JsonNode page = needTags
-                ? requestPageData("/books/search-by-tags" + query(mapOf("tags", tags, "page", 1, "size", 1000)))
-                : requestPageData("/books" + query(Map.of("page", 1, "size", 1000)));
+                ? requestPageData("/books/search-by-tags" + query(mapOf("tags", tags, "sort", sortParam, "page", 1, "size", 1000)))
+                : requestPageData("/books" + query(Map.of("page", 1, "size", 1000, "sort", sortParam)));
         List<BookCard> result = new ArrayList<>();
         for (JsonNode item : pageRecords(page)) {
             BookCard card = parseBookCard(item);
@@ -512,7 +518,61 @@ public class RemoteBackendService extends MockBackendService {
                     })
                     .toList();
         }
-        return result;
+        return applySortMode(result, sortMode);
+    }
+
+    private List<BookCard> applySortMode(List<BookCard> cards, BookSortMode sortMode) {
+        if (cards == null || cards.size() <= 1 || sortMode == null || sortMode == BookSortMode.DEFAULT) {
+            return cards == null ? List.of() : cards;
+        }
+        return switch (sortMode) {
+            case RATING_DESC -> cards.stream()
+                    .sorted((a, b) -> {
+                        int cmp = compareRatingTextDesc(a.averageScoreText(), b.averageScoreText());
+                        if (cmp != 0) {
+                            return cmp;
+                        }
+                        cmp = a.title().compareToIgnoreCase(b.title());
+                        if (cmp != 0) {
+                            return cmp;
+                        }
+                        return Long.compare(a.id(), b.id());
+                    })
+                    .toList();
+            case TITLE_ASC -> cards.stream()
+                    .sorted((a, b) -> {
+                        int cmp = a.title().compareToIgnoreCase(b.title());
+                        if (cmp != 0) {
+                            return cmp;
+                        }
+                        return Long.compare(a.id(), b.id());
+                    })
+                    .toList();
+            case DEFAULT -> cards;
+        };
+    }
+
+    private String sortParam(BookSortMode sortMode) {
+        return switch (sortMode == null ? BookSortMode.DEFAULT : sortMode) {
+            case RATING_DESC -> "rating_desc";
+            case TITLE_ASC -> "title_asc";
+            case DEFAULT -> "default";
+        };
+    }
+
+    private int compareRatingTextDesc(String left, String right) {
+        return Double.compare(parseRatingText(right), parseRatingText(left));
+    }
+
+    private double parseRatingText(String value) {
+        if (value == null || value.isBlank() || value.contains("暂无评分")) {
+            return -1;
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (Exception ex) {
+            return -1;
+        }
     }
 
     private BookCard parseBookCard(JsonNode item) {

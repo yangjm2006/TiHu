@@ -23,6 +23,10 @@ public final class AppContext {
     private String selectedBookListOwner;
     private String selectedConversationPeer;
     private BookDetailReturnTarget bookDetailReturnTarget = BookDetailReturnTarget.BOOK_LIST;
+    private String bookListTitleKeyword = "";
+    private String bookListTagsText = "";
+    private int bookListPage = 1;
+    private MockBackendService.BookSortMode bookListSortMode = MockBackendService.BookSortMode.DEFAULT;
     private boolean showFollowers;
 
     private AppContext() {
@@ -80,6 +84,10 @@ public final class AppContext {
         selectedBookListOwner = null;
         selectedConversationPeer = null;
         bookDetailReturnTarget = BookDetailReturnTarget.BOOK_LIST;
+        bookListTitleKeyword = "";
+        bookListTagsText = "";
+        bookListPage = 1;
+        bookListSortMode = MockBackendService.BookSortMode.DEFAULT;
         showFollowers = false;
     }
 
@@ -121,6 +129,38 @@ public final class AppContext {
 
     public void setBookDetailReturnTarget(BookDetailReturnTarget bookDetailReturnTarget) {
         this.bookDetailReturnTarget = bookDetailReturnTarget == null ? BookDetailReturnTarget.BOOK_LIST : bookDetailReturnTarget;
+    }
+
+    public String bookListTitleKeyword() {
+        return bookListTitleKeyword;
+    }
+
+    public void setBookListTitleKeyword(String bookListTitleKeyword) {
+        this.bookListTitleKeyword = bookListTitleKeyword == null ? "" : bookListTitleKeyword;
+    }
+
+    public String bookListTagsText() {
+        return bookListTagsText;
+    }
+
+    public void setBookListTagsText(String bookListTagsText) {
+        this.bookListTagsText = bookListTagsText == null ? "" : bookListTagsText;
+    }
+
+    public int bookListPage() {
+        return bookListPage;
+    }
+
+    public void setBookListPage(int bookListPage) {
+        this.bookListPage = Math.max(1, bookListPage);
+    }
+
+    public MockBackendService.BookSortMode bookListSortMode() {
+        return bookListSortMode;
+    }
+
+    public void setBookListSortMode(MockBackendService.BookSortMode bookListSortMode) {
+        this.bookListSortMode = bookListSortMode == null ? MockBackendService.BookSortMode.DEFAULT : bookListSortMode;
     }
 
     public boolean isShowingFollowers() {

@@ -25,6 +25,12 @@ import java.util.stream.Collectors;
 
 public class MockBackendService {
 
+    public enum BookSortMode {
+        DEFAULT,
+        RATING_DESC,
+        TITLE_ASC
+    }
+
     public enum Role {
         USER,
         ADMIN
@@ -170,17 +176,23 @@ public class MockBackendService {
     }
 
     public synchronized BookListPage listBooks(String titleKeyword, List<String> tags, int page, int pageSize) {
+        return listBooks(titleKeyword, tags, page, pageSize, BookSortMode.DEFAULT);
+    }
+
+    public synchronized BookListPage listBooks(String titleKeyword, List<String> tags, int page, int pageSize, BookSortMode sortMode) {
         List<Book> filtered = books.values().stream()
                 .filter(book -> containsKeyword(book.title(), titleKeyword))
                 .filter(book -> containsAllTags(book.tags(), tags))
-                .sorted(Comparator.comparingDouble((Book b) -> averageScore(b.id())).reversed().thenComparing(Book::title))
                 .toList();
 
+        filtered = applyBookSorting(filtered, sortMode);
+
         int safePage = Math.max(1, page);
+        int safePageSize = Math.max(1, pageSize);
         int total = filtered.size();
-        int totalPages = Math.max(1, (int) Math.ceil(total / (double) pageSize));
-        int from = Math.min((safePage - 1) * pageSize, total);
-        int to = Math.min(from + pageSize, total);
+        int totalPages = Math.max(1, (int) Math.ceil(total / (double) safePageSize));
+        int from = Math.min((safePage - 1) * safePageSize, total);
+        int to = Math.min(from + safePageSize, total);
 
         List<BookCard> items = filtered.subList(from, to).stream().map(this::toCard).toList();
         return new BookListPage(items, safePage, totalPages, total);
@@ -503,6 +515,28 @@ public class MockBackendService {
         String avgText = avg > 0 ? String.format(Locale.US, "%.1f", avg) : "暂无评分";
         String tags = String.join(" ", book.tags());
         return new BookCard(book.id(), book.title(), book.author(), tags, avgText);
+    }
+
+    private List<Book> applyBookSorting(List<Book> books, BookSortMode sortMode) {
+        if (books == null || books.size() <= 1) {
+            return books == null ? List.of() : books;
+        }
+        if (sortMode == null || sortMode == BookSortMode.DEFAULT) {
+            return books;
+        }
+        Comparator<Book> comparator = switch (sortMode) {
+            case RATING_DESC -> Comparator.comparingDouble((Book b) -> averageScore(b.id())).reversed()
+                    .thenComparing(Book::title)
+                    .thenComparingLong(Book::id);
+            case TITLE_ASC -> Comparator.comparing(Book::title, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(Book::title)
+                    .thenComparingLong(Book::id);
+            case DEFAULT -> null;
+        };
+        if (comparator == null) {
+            return books;
+        }
+        return books.stream().sorted(comparator).toList();
     }
 
     private RatingSummary ratingSummary(long bookId, String username) {

@@ -44,30 +44,34 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
 
 
     @Override
-    public Page<Book> getBooks(int pageNum, int pageSize) {
-        Page<Book> page = this.page(new Page<>(pageNum, pageSize),
-            new LambdaQueryWrapper<Book>().eq(Book::getIsDeleted, 0).orderByDesc(Book::getAvgRating));
+    public Page<Book> getBooks(int pageNum, int pageSize, String sort) {
+        LambdaQueryWrapper<Book> wrapper = new LambdaQueryWrapper<Book>()
+                .eq(Book::getIsDeleted, 0);
+        applySort(wrapper, sort);
+        Page<Book> page = this.page(new Page<>(pageNum, pageSize), wrapper);
         attachTags(page.getRecords());
         return page;
     }
 
     @Override
-    public Page<Book> searchByTitle(String keyword, int pageNum, int pageSize) {
-        Page<Book> page = this.page(new Page<>(pageNum, pageSize),
-            new LambdaQueryWrapper<Book>().eq(Book::getIsDeleted, 0).like(Book::getTitle, keyword).orderByDesc(Book::getAvgRating));
+    public Page<Book> searchByTitle(String keyword, int pageNum, int pageSize, String sort) {
+        LambdaQueryWrapper<Book> wrapper = new LambdaQueryWrapper<Book>()
+                .eq(Book::getIsDeleted, 0)
+                .like(Book::getTitle, keyword);
+        applySort(wrapper, sort);
+        Page<Book> page = this.page(new Page<>(pageNum, pageSize), wrapper);
         attachTags(page.getRecords());
         return page;
     }
 
     @Override
-    public Page<Book> searchByTags(List<String> tags, int pageNum, int pageSize) {
+    public Page<Book> searchByTags(List<String> tags, int pageNum, int pageSize, String sort) {
         int safePageSize = pageSize <= 0 ? 10 : pageSize;
         List<String> normalizedTags = normalizeTags(tags);
         Page<Book> page = new Page<>(pageNum, safePageSize);
         if (normalizedTags.isEmpty()) {
             page.setRecords(Collections.emptyList());
             page.setTotal(0);
-            page.setPages(0);
             page.setCurrent(pageNum);
             page.setSize(safePageSize);
             return page;
@@ -77,7 +81,6 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
         if (tagList.size() != normalizedTags.size()) {
             page.setRecords(Collections.emptyList());
             page.setTotal(0);
-            page.setPages(0);
             page.setCurrent(pageNum);
             page.setSize(safePageSize);
             return page;
@@ -90,7 +93,6 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
         if (relations.isEmpty()) {
             page.setRecords(Collections.emptyList());
             page.setTotal(0);
-            page.setPages(0);
             page.setCurrent(pageNum);
             page.setSize(safePageSize);
             return page;
@@ -110,7 +112,6 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
         if (matchedBookIds.isEmpty()) {
             page.setRecords(Collections.emptyList());
             page.setTotal(0);
-            page.setPages(0);
             page.setCurrent(pageNum);
             page.setSize(safePageSize);
             return page;
@@ -118,8 +119,9 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
 
         List<Book> books = this.list(new LambdaQueryWrapper<Book>()
                 .eq(Book::getIsDeleted, 0)
-                .in(Book::getId, matchedBookIds)
-                .orderByDesc(Book::getAvgRating));
+                .in(Book::getId, matchedBookIds));
+
+        applySort(books, sort);
 
         attachTags(books);
 
@@ -130,7 +132,6 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
 
         page.setRecords(records);
         page.setTotal(total);
-        page.setPages((total + safePageSize - 1L) / safePageSize);
         page.setCurrent(pageNum);
         page.setSize(safePageSize);
         return page;
@@ -276,6 +277,121 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
             }
         }
         return new ArrayList<>(normalized);
+    }
+
+    private void applySort(LambdaQueryWrapper<Book> wrapper, String sort) {
+        String normalizedSort = normalizeSort(sort);
+        if ("rating_desc".equals(normalizedSort)) {
+            wrapper.orderByDesc(Book::getAvgRating).orderByAsc(Book::getTitle).orderByAsc(Book::getId);
+        } else if ("title_asc".equals(normalizedSort)) {
+            wrapper.orderByAsc(Book::getTitle).orderByAsc(Book::getId);
+        } else {
+            wrapper.orderByAsc(Book::getCreateTime).orderByAsc(Book::getId);
+        }
+    }
+
+    private void applySort(List<Book> books, String sort) {
+        if (books == null || books.size() <= 1) {
+            return;
+        }
+        String normalizedSort = normalizeSort(sort);
+        if ("rating_desc".equals(normalizedSort)) {
+            books.sort((a, b) -> {
+                int cmp = compareDoubleDesc(a == null ? null : a.getAvgRating(), b == null ? null : b.getAvgRating());
+                if (cmp != 0) {
+                    return cmp;
+                }
+                cmp = compareStringAsc(a == null ? null : a.getTitle(), b == null ? null : b.getTitle());
+                if (cmp != 0) {
+                    return cmp;
+                }
+                return compareLongAsc(a == null ? null : a.getId(), b == null ? null : b.getId());
+            });
+            return;
+        }
+        if ("title_asc".equals(normalizedSort)) {
+            books.sort((a, b) -> {
+                int cmp = compareStringAsc(a == null ? null : a.getTitle(), b == null ? null : b.getTitle());
+                if (cmp != 0) {
+                    return cmp;
+                }
+                return compareLongAsc(a == null ? null : a.getId(), b == null ? null : b.getId());
+            });
+            return;
+        }
+        books.sort((a, b) -> {
+            int cmp = compareLocalDateTimeAsc(a == null ? null : a.getCreateTime(), b == null ? null : b.getCreateTime());
+            if (cmp != 0) {
+                return cmp;
+            }
+            return compareLongAsc(a == null ? null : a.getId(), b == null ? null : b.getId());
+        });
+    }
+
+    private String normalizeSort(String sort) {
+        if (sort == null) {
+            return "default";
+        }
+        String value = sort.trim().toLowerCase();
+        if (value.isEmpty() || "default".equals(value)) {
+            return "default";
+        }
+        if ("rating_desc".equals(value) || "title_asc".equals(value)) {
+            return value;
+        }
+        return "default";
+    }
+
+    private int compareDoubleDesc(Double left, Double right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return 1;
+        }
+        if (right == null) {
+            return -1;
+        }
+        return Double.compare(right, left);
+    }
+
+    private int compareStringAsc(String left, String right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return 1;
+        }
+        if (right == null) {
+            return -1;
+        }
+        return left.compareToIgnoreCase(right);
+    }
+
+    private int compareLongAsc(Long left, Long right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return 1;
+        }
+        if (right == null) {
+            return -1;
+        }
+        return Long.compare(left, right);
+    }
+
+    private int compareLocalDateTimeAsc(java.time.LocalDateTime left, java.time.LocalDateTime right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return 1;
+        }
+        if (right == null) {
+            return -1;
+        }
+        return left.compareTo(right);
     }
 }
 

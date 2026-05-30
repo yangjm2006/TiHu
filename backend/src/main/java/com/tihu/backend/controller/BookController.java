@@ -26,11 +26,13 @@ public class BookController {
 
     /**
      * 获取图书列表（分页）
-     * GET /api/books?page=1&size=10
+     * GET /api/books?page=1&size=10&sort=default
      */
     @GetMapping
-    public Result getBooks(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
-        Page<Book> result = bookService.getBooks(page, size);
+    public Result getBooks(@RequestParam(defaultValue = "1") int page,
+                           @RequestParam(defaultValue = "10") int size,
+                           @RequestParam(defaultValue = "default") String sort) {
+        Page<Book> result = bookService.getBooks(page, size, sort);
         return Result.success(PageData.of(result));
     }
 
@@ -39,18 +41,24 @@ public class BookController {
      * GET /api/books/search?keyword=xxx&page=1&size=10
      */
     @GetMapping("/search")
-    public Result searchByTitle(@RequestParam String keyword, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
-        Page<Book> result = bookService.searchByTitle(keyword, page, size);
+    public Result searchByTitle(@RequestParam String keyword,
+                                @RequestParam(defaultValue = "1") int page,
+                                @RequestParam(defaultValue = "10") int size,
+                                @RequestParam(defaultValue = "default") String sort) {
+        Page<Book> result = bookService.searchByTitle(keyword, page, size, sort);
         return Result.success(PageData.of(result));
     }
 
     /**
      * 按标签搜索（多标签AND）
-     * GET /api/books/search-by-tags?tags=tag1,tag2&page=1&size=10
+     * GET /api/books/search-by-tags?tags=tag1,tag2&page=1&size=10&sort=default
      */
     @GetMapping("/search-by-tags")
-    public Result searchByTags(@RequestParam List<String> tags, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
-        Page<Book> result = bookService.searchByTags(tags, page, size);
+    public Result searchByTags(@RequestParam List<String> tags,
+                               @RequestParam(defaultValue = "1") int page,
+                               @RequestParam(defaultValue = "10") int size,
+                               @RequestParam(defaultValue = "default") String sort) {
+        Page<Book> result = bookService.searchByTags(tags, page, size, sort);
         return Result.success(PageData.of(result));
     }
 
