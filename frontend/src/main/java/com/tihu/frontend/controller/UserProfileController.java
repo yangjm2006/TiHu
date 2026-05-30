@@ -138,4 +138,3 @@ public class UserProfileController implements MainContentController {
         return usernameField.getText() == null ? "" : usernameField.getText().trim();
     }
 }
-
