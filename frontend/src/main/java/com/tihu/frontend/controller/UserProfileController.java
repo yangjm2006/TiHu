@@ -15,11 +15,13 @@ public class UserProfileController implements MainContentController {
     @FXML private ListView<String> commentsListView;
     @FXML private ListView<String> bookListsView;
     @FXML private Label messageLabel;
+    @FXML private javafx.scene.control.Button followToggleButton;
 
     private final AppContext context = AppContext.getInstance();
     private MainController mainController;
     private String viewedUsername;
     private java.util.List<MockBackendService.UserBookList> profileBookLists = java.util.List.of();
+    private boolean currentFollowed;
 
     @Override
     public void setMainController(MainController mainController) {
@@ -42,29 +44,18 @@ public class UserProfileController implements MainContentController {
     }
 
     @FXML
-    private void onFollow() {
+    private void onToggleFollow() {
         try {
             String target = normalizedViewedUsername();
             if (target.isBlank()) {
                 messageLabel.setText("请输入要查看的用户名");
                 return;
             }
-            context.service().follow(context.username(), target);
-            loadProfile();
-        } catch (Exception ex) {
-            messageLabel.setText(ex.getMessage());
-        }
-    }
-
-    @FXML
-    private void onUnfollow() {
-        try {
-            String target = normalizedViewedUsername();
-            if (target.isBlank()) {
-                messageLabel.setText("请输入要查看的用户名");
-                return;
+            if (currentFollowed) {
+                context.service().unfollow(context.username(), target);
+            } else {
+                context.service().follow(context.username(), target);
             }
-            context.service().unfollow(context.username(), target);
             loadProfile();
         } catch (Exception ex) {
             messageLabel.setText(ex.getMessage());
@@ -121,8 +112,10 @@ public class UserProfileController implements MainContentController {
             context.setViewedProfileUsername(viewedUsername);
             usernameField.setText(viewedUsername);
             userLabel.setText("用户：" + profile.username());
+            currentFollowed = profile.followedByCurrentUser();
+            followToggleButton.setText(currentFollowed ? "取消关注" : "关注");
             relationLabel.setText("关注 " + profile.followingCount() + " | 粉丝 " + profile.followerCount() +
-                    " | 我是否已关注：" + (profile.followedByCurrentUser() ? "是" : "否"));
+                    " | 我是否已关注：" + (currentFollowed ? "是" : "否"));
             commentsListView.getItems().setAll(profile.comments().stream()
                     .map(item -> item.time() + " - " + item.content())
                     .toList());

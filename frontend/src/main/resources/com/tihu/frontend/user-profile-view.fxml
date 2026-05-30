@@ -10,8 +10,7 @@
             <HBox spacing="8">
                 <TextField fx:id="usernameField" promptText="输入用户名" prefWidth="180"/>
                 <Button text="查看主页" onAction="#onLoadProfile"/>
-                <Button text="关注" onAction="#onFollow"/>
-                <Button text="取关" onAction="#onUnfollow"/>
+                <Button fx:id="followToggleButton" text="关注" onAction="#onToggleFollow"/>
                 <Button text="查看关注" onAction="#onOpenFollowing"/>
                 <Button text="查看粉丝" onAction="#onOpenFollowers"/>
                 <Button text="打开书单" onAction="#onOpenBookList"/>
