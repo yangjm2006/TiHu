@@ -15,21 +15,21 @@ import com.tihu.backend.service.BookService;
 import com.tihu.backend.service.RatingService;
 import com.tihu.backend.service.TagService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements BookService {
-    
+
     @Autowired
     private RatingService ratingService;
 
@@ -41,7 +41,6 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
 
     @Autowired
     private CollectionMapper collectionMapper;
-
 
     @Override
     public Page<Book> getBooks(int pageNum, int pageSize, String sort) {
@@ -122,7 +121,6 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
                 .in(Book::getId, matchedBookIds));
 
         applySort(books, sort);
-
         attachTags(books);
 
         int total = books.size();
@@ -193,7 +191,6 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
         }
         attachTags(Collections.singletonList(book));
 
-        // 返回包含评分统计的详情对象
         Object ratingStats = ratingService.getRatingStats(bookId);
         Long favoriteCount = collectionMapper.selectCount(
                 new LambdaQueryWrapper<Collection>().eq(Collection::getBookId, bookId)
@@ -394,4 +391,3 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
         return left.compareTo(right);
     }
 }
-

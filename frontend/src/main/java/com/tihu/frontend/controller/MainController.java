@@ -96,6 +96,17 @@ public class MainController {
         loadContent("book-list-detail-view.fxml");
     }
 
+    public void openUserProfile(String username) {
+        context.setViewedProfileUsername(username);
+        loadContent("user-profile-view.fxml");
+    }
+
+    public void openFollowList(String username, boolean showFollowers) {
+        context.setFollowListTargetUsername(username);
+        context.setShowingFollowers(showFollowers);
+        loadContent("following-view.fxml");
+    }
+
     public void openChat(String peer) {
         context.setSelectedConversationPeer(peer);
         loadContent("chat-view.fxml");
@@ -114,10 +125,10 @@ public class MainController {
     @FXML public void onBooks() { loadContent("book-list-view.fxml"); }
     @FXML public void onFavorites() { loadContent("favorites-view.fxml"); }
     @FXML public void onBookLists() { loadContent("book-lists-view.fxml"); }
-    @FXML public void onUserProfile() { loadContent("user-profile-view.fxml"); }
+    @FXML public void onUserProfile() { openUserProfile(context.username()); }
     @FXML public void onProfileEdit() { loadContent("profile-edit-view.fxml"); }
-    @FXML public void onFollowing() { context.setShowingFollowers(false); loadContent("following-view.fxml"); }
-    @FXML public void onFollowers() { context.setShowingFollowers(true); loadContent("following-view.fxml"); }
+    @FXML public void onFollowing() { openFollowList(context.username(), false); }
+    @FXML public void onFollowers() { openFollowList(context.username(), true); }
     @FXML public void onConversations() { loadContent("conversations-view.fxml"); }
     @FXML private void onAdminBooks() { loadContent("admin-books-view.fxml"); }
     @FXML private void onAdminUsers() { loadContent("admin-users-view.fxml"); }

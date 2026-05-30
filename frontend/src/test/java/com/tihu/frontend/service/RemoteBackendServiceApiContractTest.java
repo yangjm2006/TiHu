@@ -75,6 +75,34 @@ class RemoteBackendServiceApiContractTest {
         assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("GET /collections?")));
     }
 
+    @Test
+    void shouldLoadOtherUserProfileAndFollowListsByUsername() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        service.registerUser("alice", "Alice123");
+        service.registerUser("bob", "Bob12345");
+        service.login("alice", "Alice123");
+
+        MockBackendService.UserProfile profile = service.getUserProfile("bob", "alice");
+        assertEquals("bob", profile.username());
+        assertEquals(1, profile.followingCount());
+        assertEquals(1, profile.followerCount());
+        assertTrue(profile.followedByCurrentUser());
+        assertEquals(1, profile.bookLists().size());
+        assertEquals(1, profile.comments().size());
+        assertEquals("科幻精选", profile.bookLists().getFirst().title());
+
+        List<MockBackendService.FollowItem> followers = service.listFollowers("bob");
+        List<MockBackendService.FollowItem> following = service.listFollowing("bob");
+        assertEquals(List.of("alice"), followers.stream().map(MockBackendService.FollowItem::username).toList());
+        assertEquals(List.of("carol"), following.stream().map(MockBackendService.FollowItem::username).toList());
+
+        assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("GET /users/profile/bob")));
+        assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("GET /follows/user/2/followers?")));
+        assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("GET /follows/user/2/followees?")));
+    }
+
     private static final class FakeApiClient extends ApiClient {
         private final ObjectMapper mapper = new ObjectMapper();
         private final List<String> requestLog = new ArrayList<>();
@@ -97,6 +125,10 @@ class RemoteBackendServiceApiContractTest {
                 case "POST /books" -> createBook(body);
                 default -> path.startsWith("/books?") ? listBooks()
                         : path.startsWith("/collections?") ? listCollections()
+                        : path.startsWith("/users/profile/") ? getUserProfile(path)
+                        : path.startsWith("/follows/user/") ? listUserFollows(path)
+                        : path.startsWith("/follows/followers?") ? listFollowers(path)
+                        : path.startsWith("/follows/followees?") ? listFollowees(path)
                         : path.startsWith("/books/") ? getBook(path)
                         : envelope(200, "OK", null);
             };
@@ -176,6 +208,85 @@ class RemoteBackendServiceApiContractTest {
             data.put("comments", List.of());
             data.put("replies", List.of());
             return envelope(200, "OK", data);
+        }
+
+        private String getUserProfile(String path) {
+            String username = path.substring("/users/profile/".length());
+            UserRecord user = users.get(username);
+            if (user == null) {
+                return envelope(404, "用户不存在", null);
+            }
+            Map<String, Object> profile = new LinkedHashMap<>();
+            profile.put("userInfo", Map.of(
+                    "id", user.id,
+                    "username", user.username,
+                    "avatar", "https://example.com/avatar.png",
+                    "bio", "读书爱好者"
+            ));
+            profile.put("followingCount", 1);
+            profile.put("followerCount", 1);
+            profile.put("followedByCurrentUser", "bob".equals(user.username));
+            profile.put("comments", List.of(Map.of(
+                    "id", 501,
+                    "userId", user.id,
+                    "username", user.username,
+                    "content", "这本书很不错",
+                    "createTime", "2026-05-25T13:45:00"
+            )));
+            profile.put("bookLists", List.of(Map.of(
+                    "id", 801,
+                    "userId", user.id,
+                    "title", "科幻精选",
+                    "description", "公开书单"
+            )));
+            return envelope(200, "OK", profile);
+        }
+
+        private String listFollowers(String path) {
+            String recordUsername = "alice";
+            return envelope(200, "OK", Map.of(
+                    "records", List.of(Map.of("username", recordUsername)),
+                    "total", 1,
+                    "pages", 1,
+                    "current", 1,
+                    "size", 10
+            ));
+        }
+
+        private String listFollowees(String path) {
+            String recordUsername = "carol";
+            return envelope(200, "OK", Map.of(
+                    "records", List.of(Map.of("username", recordUsername)),
+                    "total", 1,
+                    "pages", 1,
+                    "current", 1,
+                    "size", 10
+            ));
+        }
+
+        private String listUserFollows(String path) {
+            if (path.contains("/followers?")) {
+                return listFollowers(path);
+            }
+            if (path.contains("/followees?")) {
+                return listFollowees(path);
+            }
+            return envelope(404, "not found", null);
+        }
+
+        private String queryValue(String path, String key) {
+            int queryIndex = path.indexOf('?');
+            if (queryIndex < 0 || queryIndex == path.length() - 1) {
+                return "";
+            }
+            String query = path.substring(queryIndex + 1);
+            for (String part : query.split("&")) {
+                String[] entry = part.split("=", 2);
+                if (entry.length == 2 && key.equals(entry[0])) {
+                    return entry[1];
+                }
+            }
+            return "";
         }
 
         private JsonNode read(String body) {

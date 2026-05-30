@@ -358,7 +358,7 @@ public class RemoteBackendService extends MockBackendService {
     @Override
     public synchronized List<FollowItem> listFollowing(String username) {
         return remoteOrFallback(() -> {
-            JsonNode page = requestPageData("/follows/followees" + query(Map.of("page", 1, "size", 1000)));
+            JsonNode page = requestPageData(resolveFollowListPath(username, false));
             List<FollowItem> result = new ArrayList<>();
             for (JsonNode item : pageRecords(page)) {
                 FollowItem follow = parseFollowItem(item);
@@ -373,7 +373,7 @@ public class RemoteBackendService extends MockBackendService {
     @Override
     public synchronized List<FollowItem> listFollowers(String username) {
         return remoteOrFallback(() -> {
-            JsonNode page = requestPageData("/follows/followers" + query(Map.of("page", 1, "size", 1000)));
+            JsonNode page = requestPageData(resolveFollowListPath(username, true));
             List<FollowItem> result = new ArrayList<>();
             for (JsonNode item : pageRecords(page)) {
                 FollowItem follow = parseFollowItem(item);
@@ -388,7 +388,7 @@ public class RemoteBackendService extends MockBackendService {
     @Override
     public synchronized UserProfile getUserProfile(String target, String currentUser) {
         return remoteOrFallback(() -> {
-            JsonNode data = requestData("GET", "/users/profile" + query(Map.of("username", target)), null);
+            JsonNode data = requestData("GET", "/users/profile/" + target, null);
             UserProfile profile = parseUserProfile(data, target);
             return profile != null ? profile : super.getUserProfile(target, currentUser);
         }, () -> super.getUserProfile(target, currentUser));
@@ -975,7 +975,7 @@ public class RemoteBackendService extends MockBackendService {
             return userIdCache.get(username);
         }
         String[] candidates = {
-                "/users/profile" + query(Map.of("username", username)),
+                "/users/profile/" + username,
                 "/users/by-username/" + username,
                 "/users/" + username
         };
@@ -1003,6 +1003,18 @@ public class RemoteBackendService extends MockBackendService {
             return query(Map.of("followeeId", id));
         }
         return query(Map.of("followeeUsername", username));
+    }
+
+    private String resolveFollowListPath(String username, boolean followers) {
+        String basePath = followers ? "/follows/followers" : "/follows/followees";
+        if (username == null || username.isBlank() || Objects.equals(username, currentUsername)) {
+            return basePath + query(Map.of("page", 1, "size", 1000));
+        }
+        Long id = resolveUserId(username);
+        if (id == null) {
+            throw new IllegalStateException("无法解析用户ID：" + username);
+        }
+        return "/follows/user/" + id + (followers ? "/followers" : "/followees") + query(Map.of("page", 1, "size", 1000));
     }
 
     private String resolveMessageQuery(String peer, String content) {
@@ -1114,7 +1126,11 @@ public class RemoteBackendService extends MockBackendService {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
         }
-        String username = safe(text(firstPresent(node, "username", "user", "name")));
+        JsonNode userInfo = firstPresent(node, "userInfo", "user", "profile");
+        if (userInfo == null || userInfo.isMissingNode() || userInfo.isNull()) {
+            userInfo = node;
+        }
+        String username = safe(text(firstPresent(userInfo, "username", "user", "name")));
         if (username.isBlank()) {
             username = target;
         }
@@ -1125,6 +1141,9 @@ public class RemoteBackendService extends MockBackendService {
             for (JsonNode item : listNode) {
                 UserBookList list = parseBookList(item);
                 if (list != null) {
+                    if (list.owner().isBlank()) {
+                        list = new UserBookList(list.id(), username, list.title(), list.intro(), list.bookIds());
+                    }
                     lists.add(list);
                 }
             }

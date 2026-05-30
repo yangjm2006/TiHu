@@ -41,4 +41,3 @@ public interface BookService extends IService<Book> {
      */
     Object getBookDetail(Long bookId);
 }
-

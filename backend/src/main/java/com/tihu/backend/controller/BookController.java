@@ -5,12 +5,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tihu.backend.common.ApiException;
 import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
-import com.tihu.backend.entity.Book;
 import com.tihu.backend.dto.BookTagsRequest;
+import com.tihu.backend.entity.Book;
 import com.tihu.backend.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -38,7 +38,7 @@ public class BookController {
 
     /**
      * 按书名搜索
-     * GET /api/books/search?keyword=xxx&page=1&size=10
+     * GET /api/books/search?keyword=xxx&page=1&size=10&sort=default
      */
     @GetMapping("/search")
     public Result searchByTitle(@RequestParam String keyword,
@@ -157,4 +157,3 @@ public class BookController {
         }
     }
 }
-

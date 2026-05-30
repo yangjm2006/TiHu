@@ -22,6 +22,8 @@ public final class AppContext {
     private Long selectedBookListId;
     private String selectedBookListOwner;
     private String selectedConversationPeer;
+    private String viewedProfileUsername;
+    private String followListTargetUsername;
     private BookDetailReturnTarget bookDetailReturnTarget = BookDetailReturnTarget.BOOK_LIST;
     private String bookListTitleKeyword = "";
     private String bookListTagsText = "";
@@ -83,6 +85,8 @@ public final class AppContext {
         selectedBookListId = null;
         selectedBookListOwner = null;
         selectedConversationPeer = null;
+        viewedProfileUsername = null;
+        followListTargetUsername = null;
         bookDetailReturnTarget = BookDetailReturnTarget.BOOK_LIST;
         bookListTitleKeyword = "";
         bookListTagsText = "";
@@ -121,6 +125,22 @@ public final class AppContext {
 
     public void setSelectedConversationPeer(String selectedConversationPeer) {
         this.selectedConversationPeer = selectedConversationPeer;
+    }
+
+    public String viewedProfileUsername() {
+        return viewedProfileUsername;
+    }
+
+    public void setViewedProfileUsername(String viewedProfileUsername) {
+        this.viewedProfileUsername = viewedProfileUsername == null ? null : viewedProfileUsername.trim();
+    }
+
+    public String followListTargetUsername() {
+        return followListTargetUsername;
+    }
+
+    public void setFollowListTargetUsername(String followListTargetUsername) {
+        this.followListTargetUsername = followListTargetUsername == null ? null : followListTargetUsername.trim();
     }
 
     public BookDetailReturnTarget bookDetailReturnTarget() {

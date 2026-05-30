@@ -1,30 +1,56 @@
 package com.tihu.backend.common;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.Data;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
-/**
- * 分页数据统一包装类
- * 用于兼容前端期望的分页格式
- */
-@Data
 public class PageData<T> {
-    private List<T> records;      // 记录列表
-    private long total;           // 总记录数
-    private long pages;           // 总页数
-    private long current;         // 当前页码
-    private long size;            // 每页大小
+    private final Object records;
+    private final long total;
+    private final long pages;
+    private final long current;
+    private final long size;
+
+    public PageData(Object records, long total, long pages, long current, long size) {
+        this.records = records;
+        this.total = total;
+        this.pages = pages;
+        this.current = current;
+        this.size = size;
+    }
+
+    public Object getRecords() {
+        return records;
+    }
+
+    public long getTotal() {
+        return total;
+    }
+
+    public long getPages() {
+        return pages;
+    }
+
+    public long getCurrent() {
+        return current;
+    }
+
+    public long getSize() {
+        return size;
+    }
 
     public static <T> PageData<T> of(Page<T> page) {
-        PageData<T> pageData = new PageData<>();
-        pageData.setRecords(page.getRecords());
-        pageData.setTotal(page.getTotal());
-        pageData.setPages(page.getPages());
-        pageData.setCurrent(page.getCurrent());
-        pageData.setSize(page.getSize());
-        return pageData;
+        return new PageData<>(page.getRecords(), page.getTotal(), page.getPages(), page.getCurrent(), page.getSize());
+    }
+
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("records", records);
+        map.put("total", total);
+        map.put("pages", pages);
+        map.put("current", current);
+        map.put("size", size);
+        return map;
     }
 }
-
