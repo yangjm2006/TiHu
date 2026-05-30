@@ -61,7 +61,7 @@ public class MockBackendService {
                               int followerCount, boolean followedByCurrentUser) {
     }
 
-    public record FollowItem(String username) {
+    public record FollowItem(String username, boolean followedByCurrentUser) {
     }
 
     public record ConversationPreview(String peer, String lastMessage, LocalDateTime lastTime) {
@@ -396,16 +396,33 @@ public class MockBackendService {
     }
 
     public synchronized List<FollowItem> listFollowing(String username) {
-        return followingMap.getOrDefault(username, Set.of()).stream().sorted().map(FollowItem::new).toList();
+        return listFollowing(username, null);
+    }
+
+    public synchronized List<FollowItem> listFollowing(String username, String currentUser) {
+        Set<String> myFollowing = currentUser != null ? followingMap.getOrDefault(currentUser, Set.of()) : Set.of();
+        return followingMap.getOrDefault(username, Set.of()).stream()
+                .sorted()
+                .map(target -> new FollowItem(target, myFollowing.contains(target)))
+                .toList();
     }
 
     public synchronized List<FollowItem> listFollowers(String username) {
+        return listFollowers(username, null);
+    }
+
+    public synchronized List<FollowItem> listFollowers(String username, String currentUser) {
+        Set<String> myFollowing = currentUser != null ? followingMap.getOrDefault(currentUser, Set.of()) : Set.of();
         return followingMap.entrySet().stream()
                 .filter(entry -> entry.getValue().contains(username))
                 .map(Map.Entry::getKey)
                 .sorted()
-                .map(FollowItem::new)
+                .map(follower -> new FollowItem(follower, myFollowing.contains(follower)))
                 .toList();
+    }
+
+    public synchronized boolean isFollowing(String me, String target) {
+        return followingMap.getOrDefault(me, Set.of()).contains(target);
     }
 
     public synchronized UserProfile getUserProfile(String target, String currentUser) {
@@ -998,6 +1015,10 @@ public class MockBackendService {
         addBookToBookListInternal("alice", Math.toIntExact(list.id()), 108);
 
         follow("alice", "bob");
+        follow("alice", "admin");
+        follow("bob", "alice");
+        follow("bob", "admin");
+        follow("admin", "alice");
 
         sendMessage("alice", "bob", "你好，我想交流下三体。\n");
         sendMessage("bob", "alice", "可以呀，约个时间聊。\n");

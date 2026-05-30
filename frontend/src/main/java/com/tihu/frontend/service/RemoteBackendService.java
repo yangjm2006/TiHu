@@ -1,4 +1,4 @@
-package com.tihu.frontend.service;
+﻿package com.tihu.frontend.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -1080,7 +1080,15 @@ public class RemoteBackendService extends MockBackendService {
             return null;
         }
         String username = safe(text(firstPresent(node, "username", "user", "followeeUsername", "nickname")));
-        return username.isBlank() ? null : new FollowItem(username);
+        if (username.isBlank()) {
+            return null;
+        }
+        boolean followedByCurrentUser = false;
+        JsonNode followedNode = firstPresent(node, "followedByCurrentUser", "followed", "isFollowed");
+        if (followedNode != null) {
+            followedByCurrentUser = followedNode.isBoolean() ? followedNode.asBoolean() : Boolean.parseBoolean(followedNode.asText());
+        }
+        return new FollowItem(username, followedByCurrentUser);
     }
 
     private ConversationPreview parseConversationPreview(JsonNode node) {
@@ -1276,3 +1284,54 @@ public class RemoteBackendService extends MockBackendService {
         return map;
     }
 }
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (int i = 0; i + 1 < pairs.length; i += 2) {
+            map.put(String.valueOf(pairs[i]), pairs[i + 1]);
+        }
+        return map;
+    }
+}
+
+        for (int i = 0; i + 1 < pairs.length; i += 2) {
+            map.put(String.valueOf(pairs[i]), pairs[i + 1]);
+        }
+        return map;
+    }
+}
+
+        for (int i = 0; i + 1 < pairs.length; i += 2) {
+            map.put(String.valueOf(pairs[i]), pairs[i + 1]);
+        }
+        return map;
+    }
+}
+
+    }
+
+    private Map<String, Object> mapOf(Object... pairs) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (int i = 0; i + 1 < pairs.length; i += 2) {
+            map.put(String.valueOf(pairs[i]), pairs[i + 1]);
+        }
+        return map;
+    }
+}
+        for (int i = 1; i <= 10; i++) {
+            distribution.put(i, 0);
+        }
+        return distribution;
+    }
+
+    private String query(Map<String, ?> params) {
+        return ApiClient.encodeQuery(params);
+    }
+
+    private Map<String, Object> mapOf(Object... pairs) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (int i = 0; i + 1 < pairs.length; i += 2) {
+            map.put(String.valueOf(pairs[i]), pairs[i + 1]);
+        }
+        return map;
+    }
+}
+
