@@ -11,12 +11,12 @@ public interface MessageService extends IService<Message> {
     /**
      * 发送私信
      */
-    Message sendMessage(Long senderId, Long receiverId, String content) throws Exception;
+    Object sendMessage(Long senderId, Long receiverId, String content) throws Exception;
     
     /**
      * 获取与某用户的对话历史
      */
-    Page<Message> getConversation(Long userId, Long otherUserId, int pageNum, int pageSize);
+    Page<Object> getConversation(Long userId, Long otherUserId, int pageNum, int pageSize);
     
     /**
      * 获取对话列表（最后消息聚合）

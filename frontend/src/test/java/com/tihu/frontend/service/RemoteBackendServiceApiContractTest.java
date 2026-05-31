@@ -98,9 +98,14 @@ class RemoteBackendServiceApiContractTest {
         assertEquals(List.of("alice"), followers.stream().map(MockBackendService.FollowItem::username).toList());
         assertEquals(List.of("carol"), following.stream().map(MockBackendService.FollowItem::username).toList());
 
+        service.follow("alice", "bob");
+        service.unfollow("alice", "bob");
+
         assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("GET /users/profile/bob")));
         assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("GET /follows/user/2/followers?")));
         assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("GET /follows/user/2/followees?")));
+        assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("POST /follows?followeeId=2")));
+        assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("DELETE /follows?followeeId=2")));
     }
 
     private static final class FakeApiClient extends ApiClient {
@@ -243,9 +248,8 @@ class RemoteBackendServiceApiContractTest {
         }
 
         private String listFollowers(String path) {
-            String recordUsername = "alice";
             return envelope(200, "OK", Map.of(
-                    "records", List.of(Map.of("username", recordUsername)),
+                    "records", List.of(Map.of("follower", Map.of("username", "alice"))),
                     "total", 1,
                     "pages", 1,
                     "current", 1,
@@ -254,9 +258,8 @@ class RemoteBackendServiceApiContractTest {
         }
 
         private String listFollowees(String path) {
-            String recordUsername = "carol";
             return envelope(200, "OK", Map.of(
-                    "records", List.of(Map.of("username", recordUsername)),
+                    "records", List.of(Map.of("followee", Map.of("username", "carol"))),
                     "total", 1,
                     "pages", 1,
                     "current", 1,

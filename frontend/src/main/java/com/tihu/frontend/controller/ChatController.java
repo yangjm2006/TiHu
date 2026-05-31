@@ -8,6 +8,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 
 public class ChatController implements MainContentController {
 
@@ -28,6 +29,12 @@ public class ChatController implements MainContentController {
     @Override
     public void onShow() {
         peer = context.selectedConversationPeer();
+        if (peer == null || peer.isBlank()) {
+            peer = "";
+            titleLabel.setText("私信");
+            messageLabel.setText("请先选择或输入私信对象");
+            return;
+        }
         titleLabel.setText("与 " + peer + " 的私信");
         refresh();
     }
@@ -35,11 +42,37 @@ public class ChatController implements MainContentController {
     @FXML
     private void onSend() {
         try {
-            context.service().sendMessage(context.username(), peer, inputArea.getText());
+            String content = inputArea.getText() == null ? "" : inputArea.getText().trim();
+            if (peer.isBlank()) {
+                messageLabel.setText("请先选择私信对象");
+                return;
+            }
+            if (peer.equals(context.username())) {
+                messageLabel.setText("不能给自己发私信");
+                return;
+            }
+            if (content.isBlank()) {
+                messageLabel.setText("消息不能为空");
+                return;
+            }
+            context.service().sendMessage(context.username(), peer, content);
             inputArea.clear();
             refresh();
+            messageLabel.setText("已发送");
         } catch (Exception ex) {
             messageLabel.setText(ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onRefresh() {
+        refresh();
+    }
+
+    @FXML
+    private void onOpenPeerProfile() {
+        if (mainController != null && peer != null && !peer.isBlank()) {
+            mainController.openUserProfile(peer);
         }
     }
 
@@ -52,9 +85,21 @@ public class ChatController implements MainContentController {
 
     private void refresh() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        if (peer == null || peer.isBlank()) {
+            messageListView.getItems().clear();
+            return;
+        }
         messageListView.getItems().setAll(context.service().listMessages(context.username(), peer).stream()
-                .map(item -> "[" + item.time().format(formatter) + "] " + item.from() + " -> " + item.to() + ": " + item.content())
+                .sorted(Comparator.comparing(MockBackendService.MessageItem::time))
+                .map(item -> {
+                    boolean mine = context.username().equals(item.from());
+                    String sender = mine ? "我" : item.from();
+                    return "[" + item.time().format(formatter) + "] " + sender + ": " + item.content();
+                })
                 .toList());
+        if (!messageListView.getItems().isEmpty()) {
+            messageListView.scrollTo(messageListView.getItems().size() - 1);
+        }
     }
 }
 

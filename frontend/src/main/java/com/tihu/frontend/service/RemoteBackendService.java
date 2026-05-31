@@ -1079,20 +1079,41 @@ public class RemoteBackendService extends MockBackendService {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
         }
-        String username = safe(text(firstPresent(node, "username", "user", "followeeUsername", "nickname")));
+        String username = extractUsername(node);
         return username.isBlank() ? null : new FollowItem(username);
+    }
+
+    private String extractUsername(JsonNode node) {
+        String username = safe(text(firstPresent(node, "username", "user", "followeeUsername", "followerUsername",
+                "nickname", "name")));
+        if (!username.isBlank()) {
+            return username;
+        }
+        JsonNode nested = firstPresent(node, "userInfo", "userInfoVO", "user", "followee", "follower", "profile");
+        if (nested != null && nested != node) {
+            return extractUsername(nested);
+        }
+        return "";
     }
 
     private ConversationPreview parseConversationPreview(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
         }
-        String peer = safe(text(firstPresent(node, "peer", "username", "user", "peerUsername")));
+        String peer = safe(text(firstPresent(node, "peer", "username", "user", "peerUsername", "targetUsername",
+                "otherUsername")));
+        if (peer.isBlank()) {
+            JsonNode peerNode = firstPresent(node, "peerUser", "targetUser", "otherUser", "userInfo", "user");
+            if (peerNode != null && peerNode != node) {
+                peer = extractUsername(peerNode);
+            }
+        }
         if (peer.isBlank()) {
             return null;
         }
-        String lastMessage = safe(text(firstPresent(node, "lastMessage", "content", "message")));
-        LocalDateTime time = parseDateTime(text(firstPresent(node, "lastTime", "time", "updatedAt")));
+        String lastMessage = safe(text(firstPresent(node, "lastMessage", "lastContent", "content", "message")));
+        LocalDateTime time = parseDateTime(text(firstPresent(node, "lastTime", "time", "updatedAt", "createTime",
+                "createdAt")));
         return new ConversationPreview(peer, lastMessage, time);
     }
 
@@ -1100,9 +1121,23 @@ public class RemoteBackendService extends MockBackendService {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
         }
-        String from = safe(text(firstPresent(node, "from", "sender", "senderUsername")));
-        String to = safe(text(firstPresent(node, "to", "receiver", "receiverUsername")));
-        String content = safe(text(firstPresent(node, "content", "message")));
+        String from = safe(text(firstPresent(node, "from", "sender", "senderUsername", "fromUsername",
+                "senderName")));
+        if (from.isBlank()) {
+            JsonNode senderNode = firstPresent(node, "senderUser", "senderInfo", "sender");
+            if (senderNode != null && senderNode != node) {
+                from = extractUsername(senderNode);
+            }
+        }
+        String to = safe(text(firstPresent(node, "to", "receiver", "receiverUsername", "toUsername",
+                "receiverName")));
+        if (to.isBlank()) {
+            JsonNode receiverNode = firstPresent(node, "receiverUser", "receiverInfo", "receiver");
+            if (receiverNode != null && receiverNode != node) {
+                to = extractUsername(receiverNode);
+            }
+        }
+        String content = safe(text(firstPresent(node, "content", "message", "text")));
         LocalDateTime time = parseDateTime(text(firstPresent(node, "time", "createTime", "createdAt")));
         if (from.isBlank() || to.isBlank()) {
             return null;

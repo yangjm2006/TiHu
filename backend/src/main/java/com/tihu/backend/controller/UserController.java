@@ -94,12 +94,31 @@ public class UserController {
     }
 
     /**
-     * 按用户ID获取用户信息
-     * GET /api/users/{id}
+     * 按用户名获取用户信息
+     * GET /api/users/by-username/{username}
      */
-    @GetMapping("/{id}")
-    public Result getUserById(@PathVariable Long id) {
-        User user = userService.getById(id);
+    @GetMapping("/by-username/{username}")
+    public Result getUserByUsername(@PathVariable String username) {
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            return Result.error(404, "用户不存在", null);
+        }
+        return Result.success(user);
+    }
+
+    /**
+     * 按用户ID或用户名获取用户信息
+     * GET /api/users/{id}
+     * GET /api/users/{username}
+     */
+    @GetMapping("/{identifier}")
+    public Result getUserByIdentifier(@PathVariable String identifier) {
+        User user;
+        if (identifier.matches("\\d+")) {
+            user = userService.getById(Long.parseLong(identifier));
+        } else {
+            user = userService.getUserByUsername(identifier);
+        }
         if (user == null) {
             return Result.error(404, "用户不存在", null);
         }

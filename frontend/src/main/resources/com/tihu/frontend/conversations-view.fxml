@@ -6,12 +6,25 @@
       spacing="10"
       prefWidth="1000" prefHeight="680"
       style="-fx-padding: 16;">
-    <Label text="私信会话列表（按最后消息时间倒序）" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-    <ListView fx:id="conversationListView" prefHeight="520"/>
-    <HBox spacing="8">
-        <TextField fx:id="peerField" promptText="给谁发起会话（输入用户名）" prefWidth="240"/>
-        <Button text="打开选中会话" onAction="#onOpenChat"/>
-        <Button text="发起新会话" onAction="#onStartChat"/>
+    <HBox spacing="10" style="-fx-alignment: center-left;">
+        <Label text="私信会话" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <TextField fx:id="keywordField" promptText="筛选用户名或消息" prefWidth="180" onAction="#onFilter"/>
+        <Button text="筛选" onAction="#onFilter"/>
+        <Button text="清空" onAction="#onClearFilter"/>
+        <Button text="刷新" onAction="#onRefresh"/>
     </HBox>
-    <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
+    <ListView fx:id="conversationListView" prefHeight="520"/>
+    <VBox spacing="8">
+        <HBox spacing="8">
+            <TextField fx:id="peerField" promptText="给谁发起会话（输入用户名）" prefWidth="240"/>
+            <Button text="发起/打开会话" onAction="#onStartChat"/>
+            <Button text="查看用户主页" onAction="#onOpenTypedPeerProfile"/>
+        </HBox>
+        <TextArea fx:id="firstMessageArea" prefRowCount="2" wrapText="true" promptText="可选：输入首条消息，点击发起/打开会话后立即发送"/>
+    </VBox>
+    <HBox spacing="8">
+        <Button text="打开选中会话" onAction="#onOpenChat"/>
+        <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
+    </HBox>
 </VBox>
