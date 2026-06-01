@@ -11,7 +11,7 @@ public interface CommentService extends IService<Comment> {
     /**
      * 创建评论/回复
      */
-    Comment createComment(Long userId, Long bookId, String content, Long parentCommentId) throws Exception;
+    Object createComment(Long userId, Long bookId, String content, Long parentCommentId) throws Exception;
     
     /**
      * 获取图书的评论列表（含二级回复）
@@ -31,6 +31,6 @@ public interface CommentService extends IService<Comment> {
     /**
      * 获取全站所有评论（管理员）
      */
-    Object getAllComments() throws Exception;
+    Page<Object> getAllComments(int pageNum, int pageSize) throws Exception;
 }
 

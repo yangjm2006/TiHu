@@ -76,6 +76,21 @@ class RemoteBackendServiceApiContractTest {
     }
 
     @Test
+    void shouldLoadBookCommentsWithVotesAndReplies() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        MockBackendService.BookDetail detail = service.getBookDetail(100, "alice");
+
+        assertEquals(1, detail.comments().size());
+        assertEquals(1, detail.replies().size());
+        assertEquals(3, detail.comments().getFirst().upVotes());
+        assertEquals(1, detail.comments().getFirst().downVotes());
+        assertEquals(detail.comments().getFirst().id(), detail.replies().getFirst().parentId());
+        assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("GET /comments/book/100?")));
+    }
+
+    @Test
     void shouldLoadOtherUserProfileAndFollowListsByUsername() {
         FakeApiClient apiClient = new FakeApiClient();
         RemoteBackendService service = new RemoteBackendService(apiClient);
@@ -130,6 +145,7 @@ class RemoteBackendServiceApiContractTest {
                 case "POST /books" -> createBook(body);
                 default -> path.startsWith("/books?") ? listBooks()
                         : path.startsWith("/collections?") ? listCollections()
+                        : path.startsWith("/comments/book/") ? listBookComments()
                         : path.startsWith("/users/profile/") ? getUserProfile(path)
                         : path.startsWith("/follows/user/") ? listUserFollows(path)
                         : path.startsWith("/follows/followers?") ? listFollowers(path)
@@ -213,6 +229,34 @@ class RemoteBackendServiceApiContractTest {
             data.put("comments", List.of());
             data.put("replies", List.of());
             return envelope(200, "OK", data);
+        }
+
+        private String listBookComments() {
+            return envelope(200, "OK", Map.of(
+                    "records", List.of(
+                            Map.of(
+                                    "id", 501,
+                                    "username", "alice",
+                                    "content", "这本书不错",
+                                    "createTime", "2026-05-31T12:00:00",
+                                    "upVotes", 3,
+                                    "downVotes", 1
+                            ),
+                            Map.of(
+                                    "id", 502,
+                                    "username", "bob",
+                                    "content", "同意",
+                                    "createTime", "2026-05-31T12:05:00",
+                                    "parentId", 501,
+                                    "upVotes", 2,
+                                    "downVotes", 0
+                            )
+                    ),
+                    "total", 2,
+                    "pages", 1,
+                    "current", 1,
+                    "size", 100
+            ));
         }
 
         private String getUserProfile(String path) {

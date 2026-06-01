@@ -2,9 +2,9 @@ package com.tihu.backend.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.tihu.backend.common.ApiException;
 import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
-import com.tihu.backend.entity.Comment;
 import com.tihu.backend.service.CommentService;
 import com.tihu.backend.service.CommentLikeService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,7 @@ public class CommentController {
     @PostMapping
     public Result createComment(@RequestParam Long bookId, @RequestParam String content, @RequestParam(required = false) Long parentCommentId) throws Exception {
         Long userId = Long.parseLong(StpUtil.getLoginId().toString());
-        Comment comment = commentService.createComment(userId, bookId, content, parentCommentId);
+        Object comment = commentService.createComment(userId, bookId, content, parentCommentId);
         return Result.success(comment);
     }
 
@@ -78,6 +78,36 @@ public class CommentController {
     }
 
     /**
+     * 评论投票
+     * POST /api/comments/{id}/votes?target=1|-1|0
+     */
+    @PostMapping("/{id}/votes")
+    public Result voteComment(@PathVariable Long id, @RequestParam Integer target) throws Exception {
+        Long userId = Long.parseLong(StpUtil.getLoginId().toString());
+        Integer status = commentLikeService.getLikeStatus(userId, id);
+
+        if (target == 1) {
+            if (status == 1) {
+                commentLikeService.cancelLike(userId, id);
+            } else {
+                commentLikeService.likeComment(userId, id);
+            }
+        } else if (target == -1) {
+            if (status == 2) {
+                commentLikeService.cancelLike(userId, id);
+            } else {
+                commentLikeService.dislikeComment(userId, id);
+            }
+        } else if (target == 0) {
+            commentLikeService.cancelLike(userId, id);
+        } else {
+            throw new ApiException(400, "target必须为1、-1或0");
+        }
+
+        return Result.success();
+    }
+
+    /**
      * 取消点赞/踩
      * DELETE /api/comments/{id}/like
      */
@@ -94,18 +124,33 @@ public class CommentController {
      */
     @DeleteMapping("/admin/{id}")
     public Result deleteComment(@PathVariable Long id) throws Exception {
+        StpUtil.checkRole("ADMIN");
         commentService.deleteComment(id);
         return Result.success();
     }
 
     /**
      * 管理员接口：查看全站评论
+     * GET /api/comments/admin?page=1&size=1000
+     */
+    @GetMapping("/admin")
+    public Result getAllComments(@RequestParam(defaultValue = "1") int page,
+                                 @RequestParam(defaultValue = "1000") int size) throws Exception {
+        StpUtil.checkRole("ADMIN");
+        Page<Object> comments = commentService.getAllComments(page, size);
+        return Result.success(PageData.of(comments));
+    }
+
+    /**
+     * 管理员接口：查看全站评论（旧路径兼容）
      * GET /api/comments/admin/all
      */
     @GetMapping("/admin/all")
-    public Result getAllComments() throws Exception {
-        Object comments = commentService.getAllComments();
-        return Result.success(comments);
+    public Result getAllCommentsLegacy(@RequestParam(defaultValue = "1") int page,
+                                       @RequestParam(defaultValue = "1000") int size) throws Exception {
+        StpUtil.checkRole("ADMIN");
+        Page<Object> comments = commentService.getAllComments(page, size);
+        return Result.success(PageData.of(comments));
     }
 }
 

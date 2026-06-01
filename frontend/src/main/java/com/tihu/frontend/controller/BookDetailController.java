@@ -82,9 +82,15 @@ public class BookDetailController implements MainContentController {
     @FXML
     private void onSubmitComment() {
         try {
-            context.service().addComment(bookId, context.username(), commentInputArea.getText(), null);
+            String content = commentContent();
+            if (content.isEmpty()) {
+                messageLabel.setText("评论不能为空");
+                return;
+            }
+            context.service().addComment(bookId, context.username(), content, null);
             commentInputArea.clear();
             refresh();
+            messageLabel.setText("评论已发布");
         } catch (Exception ex) {
             messageLabel.setText(ex.getMessage());
         }
@@ -103,9 +109,15 @@ public class BookDetailController implements MainContentController {
                 messageLabel.setText("只能回复一级评论");
                 return;
             }
-            context.service().addComment(bookId, context.username(), commentInputArea.getText(), selected.id());
+            String content = commentContent();
+            if (content.isEmpty()) {
+                messageLabel.setText("回复不能为空");
+                return;
+            }
+            context.service().addComment(bookId, context.username(), content, selected.id());
             commentInputArea.clear();
             refresh();
+            messageLabel.setText("回复已发布");
         } catch (Exception ex) {
             messageLabel.setText(ex.getMessage());
         }
@@ -125,6 +137,7 @@ public class BookDetailController implements MainContentController {
             context.service().deleteOwnComment(bookId, selected.id(), context.username());
         }
         refresh();
+        messageLabel.setText("评论已删除");
     }
 
     @FXML
@@ -157,6 +170,7 @@ public class BookDetailController implements MainContentController {
         try {
             context.service().voteComment(flattenComments.get(idx).id(), context.username(), target);
             refresh();
+            messageLabel.setText(target == 1 ? "点赞已更新" : "点踩已更新");
         } catch (Exception ex) {
             messageLabel.setText(ex.getMessage());
         }
@@ -222,5 +236,10 @@ public class BookDetailController implements MainContentController {
     private String formatComment(MockBackendService.CommentItem item, boolean reply) {
         String prefix = reply ? "  -> " : "";
         return prefix + item.user() + "：" + item.content() + "  [赞" + item.upVotes() + "/踩" + item.downVotes() + "]";
+    }
+
+    private String commentContent() {
+        String content = commentInputArea.getText();
+        return content == null ? "" : content.trim();
     }
 }

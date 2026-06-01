@@ -102,10 +102,15 @@ public class RemoteBackendService extends MockBackendService {
             if (summary == null) {
                 summary = fetchRatingSummary(bookId);
             }
-            List<CommentItem> comments = parseComments(firstPresent(data, "comments", "commentList", "data"));
-            List<CommentItem> replies = parseComments(firstPresent(data, "replies", "replyList"));
+            List<CommentItem> detailComments = parseComments(firstPresent(data, "comments", "commentList"));
+            List<CommentItem> detailReplies = parseComments(firstPresent(data, "replies", "replyList"));
+            List<CommentItem> comments = topLevelComments(detailComments);
+            List<CommentItem> replies = childComments(detailComments);
+            replies = mergeComments(replies, detailReplies);
             if (comments.isEmpty() && replies.isEmpty()) {
-                comments = parseComments(requestPageData("/comments/book/" + bookId + query(Map.of("page", 1, "size", 100))));
+                List<CommentItem> allComments = parseComments(requestPageData("/comments/book/" + bookId + query(Map.of("page", 1, "size", 100))));
+                comments = topLevelComments(allComments);
+                replies = childComments(allComments);
             }
             int favoriteCount = intValue(firstPresent(data, "favoriteCount", "favoritesCount", "collectCount", "collectionCount", "collectedCount"));
             if (favoriteCount <= 0) {
@@ -236,6 +241,9 @@ public class RemoteBackendService extends MockBackendService {
             }
             JsonNode data = requestData("POST", "/comments" + query(params), null);
             CommentItem item = parseCommentItem(firstPresent(data, "comment", "data"));
+            if (item == null) {
+                item = parseCommentItem(data);
+            }
             return item != null ? item : super.addComment(bookId, username, content, parentCommentId);
         }, () -> super.addComment(bookId, username, content, parentCommentId));
     }
@@ -827,18 +835,42 @@ public class RemoteBackendService extends MockBackendService {
         JsonNode data = node.isArray() ? node : firstPresent(node, "records", "list", "data", "comments");
         if (data != null && data.isArray()) {
             for (JsonNode item : data) {
-                long id = longValue(firstPresent(item, "id", "commentId"), 0L);
-                if (id <= 0) {
+                CommentItem comment = parseCommentItem(item);
+                if (comment == null) {
                     continue;
                 }
-                String content = safe(text(firstPresent(item, "content", "text")));
-                String user = safe(text(firstPresent(item, "username", "user", "nickname")));
-                LocalDateTime time = parseDateTime(text(firstPresent(item, "createTime", "time", "createdAt")));
-                Long parentId = longNullable(firstPresent(item, "parentId", "replyTo"));
-                result.add(new CommentItem(id, user, content, time, parentId, 0, 0));
+                result.add(comment);
+                JsonNode replies = firstPresent(item, "replies", "replyList", "children");
+                for (CommentItem reply : parseComments(replies)) {
+                    result.add(reply.parentId() == null
+                            ? new CommentItem(reply.id(), reply.user(), reply.content(), reply.time(), comment.id(),
+                            reply.upVotes(), reply.downVotes())
+                            : reply);
+                }
             }
         }
         return result;
+    }
+
+    private List<CommentItem> topLevelComments(List<CommentItem> comments) {
+        return comments.stream().filter(item -> item.parentId() == null).toList();
+    }
+
+    private List<CommentItem> childComments(List<CommentItem> comments) {
+        return comments.stream().filter(item -> item.parentId() != null).toList();
+    }
+
+    private List<CommentItem> mergeComments(List<CommentItem> first, List<CommentItem> second) {
+        if (first.isEmpty()) {
+            return second;
+        }
+        if (second.isEmpty()) {
+            return first;
+        }
+        Map<Long, CommentItem> merged = new LinkedHashMap<>();
+        first.forEach(item -> merged.put(item.id(), item));
+        second.forEach(item -> merged.putIfAbsent(item.id(), item));
+        return new ArrayList<>(merged.values());
     }
 
     private List<JsonNode> pageRecords(JsonNode page) {

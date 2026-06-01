@@ -649,20 +649,38 @@ public class MockBackendService {
 
     private void deleteOwnCommentInternal(long bookId, long commentId, String username) {
         List<CommentItem> list = commentMap.getOrDefault(bookId, new ArrayList<>());
-        list.removeIf(item -> item.id() == commentId && item.user().equals(username));
+        boolean canDelete = list.stream().anyMatch(item -> item.id() == commentId && item.user().equals(username));
+        if (canDelete) {
+            deleteCommentAndReplies(list, commentId);
+        }
     }
 
     private void adminDeleteCommentInternal(long bookId, long commentId) {
         List<CommentItem> list = commentMap.getOrDefault(bookId, new ArrayList<>());
-        list.removeIf(item -> item.id() == commentId);
+        deleteCommentAndReplies(list, commentId);
     }
 
     private void deleteCommentByIdInternal(long commentId) {
         for (List<CommentItem> list : commentMap.values()) {
-            if (list.removeIf(item -> item.id() == commentId)) {
+            if (deleteCommentAndReplies(list, commentId)) {
                 return;
             }
         }
+    }
+
+    private boolean deleteCommentAndReplies(List<CommentItem> list, long commentId) {
+        Set<Long> removedIds = list.stream()
+                .filter(item -> item.id() == commentId || Objects.equals(item.parentId(), commentId))
+                .map(CommentItem::id)
+                .collect(Collectors.toSet());
+        if (removedIds.isEmpty()) {
+            return false;
+        }
+        boolean removed = list.removeIf(item -> item.id() == commentId || Objects.equals(item.parentId(), commentId));
+        if (removed) {
+            removedIds.forEach(voteMap::remove);
+        }
+        return removed;
     }
 
     private void addBookToBookListInternal(String username, int listId, int bookId) {

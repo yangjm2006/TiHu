@@ -231,6 +231,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         // 构建返回对象
         java.util.Map<String, Object> profile = new java.util.HashMap<>();
+        profile.put("id", user.getId());
+        profile.put("userId", user.getId());
+        profile.put("username", user.getUsername());
         profile.put("userInfo", user);
 
         // 获取该用户的评论列表（时间倒序）

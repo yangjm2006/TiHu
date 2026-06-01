@@ -104,8 +104,8 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         record.put("createdAt", message.getCreateTime());
         record.put("senderId", message.getSenderId());
         record.put("receiverId", message.getReceiverId());
-        record.put("senderUser", sender);
-        record.put("receiverUser", receiver);
+        record.put("senderUser", toPublicUser(sender));
+        record.put("receiverUser", toPublicUser(receiver));
         return record;
     }
 
@@ -114,12 +114,24 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         Map<String, Object> record = new HashMap<>();
         record.put("peer", peer != null ? peer.getUsername() : null);
         record.put("peerUsername", peer != null ? peer.getUsername() : null);
-        record.put("peerUser", peer);
+        record.put("peerUser", toPublicUser(peer));
         record.put("lastMessage", lastMessage.getContent());
         record.put("lastContent", lastMessage.getContent());
         record.put("lastTime", lastMessage.getCreateTime());
         record.put("updatedAt", lastMessage.getCreateTime());
         return record;
+    }
+
+    private Map<String, Object> toPublicUser(User user) {
+        if (user == null) {
+            return null;
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", user.getId());
+        data.put("userId", user.getId());
+        data.put("username", user.getUsername());
+        data.put("avatar", user.getAvatar());
+        return data;
     }
 }
 

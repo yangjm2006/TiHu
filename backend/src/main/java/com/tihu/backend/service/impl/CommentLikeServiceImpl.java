@@ -32,7 +32,7 @@ public class CommentLikeServiceImpl extends ServiceImpl<CommentLikeMapper, Comme
             }
             // 切换：踩 -> 赞
             this.removeById(existing.getId());
-            comment.setDislikeCount(Math.max(0, comment.getDislikeCount() - 1));
+            comment.setDislikeCount(Math.max(0, count(comment.getDislikeCount()) - 1));
         }
         
         CommentLike like = new CommentLike();
@@ -41,7 +41,7 @@ public class CommentLikeServiceImpl extends ServiceImpl<CommentLikeMapper, Comme
         like.setLikeType(0);
         this.save(like);
         
-        comment.setLikeCount(comment.getLikeCount() + 1);
+        comment.setLikeCount(count(comment.getLikeCount()) + 1);
         commentMapper.updateById(comment);
     }
 
@@ -60,7 +60,7 @@ public class CommentLikeServiceImpl extends ServiceImpl<CommentLikeMapper, Comme
             }
             // 切换：赞 -> 踩
             this.removeById(existing.getId());
-            comment.setLikeCount(Math.max(0, comment.getLikeCount() - 1));
+            comment.setLikeCount(Math.max(0, count(comment.getLikeCount()) - 1));
         }
         
         CommentLike like = new CommentLike();
@@ -69,7 +69,7 @@ public class CommentLikeServiceImpl extends ServiceImpl<CommentLikeMapper, Comme
         like.setLikeType(1);
         this.save(like);
         
-        comment.setDislikeCount(comment.getDislikeCount() + 1);
+        comment.setDislikeCount(count(comment.getDislikeCount()) + 1);
         commentMapper.updateById(comment);
     }
 
@@ -79,10 +79,14 @@ public class CommentLikeServiceImpl extends ServiceImpl<CommentLikeMapper, Comme
         
         if (existing != null) {
             Comment comment = commentMapper.selectById(commentId);
+            if (comment == null) {
+                this.removeById(existing.getId());
+                return;
+            }
             if (existing.getLikeType() == 0) {
-                comment.setLikeCount(Math.max(0, comment.getLikeCount() - 1));
+                comment.setLikeCount(Math.max(0, count(comment.getLikeCount()) - 1));
             } else {
-                comment.setDislikeCount(Math.max(0, comment.getDislikeCount() - 1));
+                comment.setDislikeCount(Math.max(0, count(comment.getDislikeCount()) - 1));
             }
             commentMapper.updateById(comment);
             this.removeById(existing.getId());
@@ -96,6 +100,10 @@ public class CommentLikeServiceImpl extends ServiceImpl<CommentLikeMapper, Comme
             return 0; // 无
         }
         return like.getLikeType() == 0 ? 1 : 2; // 1=赞, 2=踩
+    }
+
+    private int count(Integer value) {
+        return value == null ? 0 : value;
     }
 }
 
