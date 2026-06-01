@@ -33,6 +33,11 @@ public interface UserService extends IService<User> {
     void updateUsername(Long userId, String newUsername) throws Exception;
 
     /**
+     * 修改当前用户资料
+     */
+    User updateProfile(Long userId, String currentUsername, String newUsername, String newPassword) throws Exception;
+
+    /**
      * 封禁用户
      */
     void banUser(Long userId, Long banDurationSeconds);
@@ -41,6 +46,16 @@ public interface UserService extends IService<User> {
      * 解封用户
      */
     void unbanUser(Long userId);
+
+    /**
+     * 按用户名封禁用户
+     */
+    void banUserByUsername(String username, String until);
+
+    /**
+     * 按用户名解封用户
+     */
+    void unbanUserByUsername(String username);
 
     /**
      * 获取用户主页信息（包含评论、书单、关注等）

@@ -6,6 +6,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.input.MouseButton;
 
 public class UserProfileController implements MainContentController {
 
@@ -22,6 +23,15 @@ public class UserProfileController implements MainContentController {
     private String viewedUsername;
     private java.util.List<MockBackendService.UserBookList> profileBookLists = java.util.List.of();
     private boolean currentFollowed;
+
+    @FXML
+    public void initialize() {
+        bookListsView.setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+                onOpenBookList();
+            }
+        });
+    }
 
     @Override
     public void setMainController(MainController mainController) {
@@ -121,7 +131,8 @@ public class UserProfileController implements MainContentController {
                     .toList());
             profileBookLists = profile.bookLists();
             bookListsView.getItems().setAll(profile.bookLists().stream()
-                    .map(item -> item.title() + "（" + item.bookIds().size() + "本）")
+                    .map(item -> item.title() + "（" + item.bookIds().size() + "本，" +
+                            (item.publicVisible() ? "公开" : "私密") + "）")
                     .toList());
             messageLabel.setText(profile.username().equals(context.username())
                     ? "当前查看的是你自己的主页"

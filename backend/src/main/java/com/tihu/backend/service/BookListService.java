@@ -11,22 +11,32 @@ public interface BookListService extends IService<BookList> {
     /**
      * 创建书单
      */
-    BookList createBookList(Long userId, String title, String description) throws Exception;
+    Object createBookList(Long userId, String title, String description, Boolean publicVisible, String visibility) throws Exception;
     
     /**
      * 获取用户的书单列表
      */
-    Page<BookList> getUserBookLists(Long userId, int pageNum, int pageSize);
+    Page<Object> getUserBookLists(Long userId, int pageNum, int pageSize);
     
     /**
      * 获取书单详情（含书籍列表）
      */
-    Object getBookListDetail(Long bookListId);
+    Object getBookListDetail(Long bookListId, Long currentUserId);
+
+    /**
+     * 修改书单可见性
+     */
+    void updateVisibility(Long bookListId, Long userId, Boolean publicVisible, String visibility) throws Exception;
     
     /**
      * 添加书到书单
      */
     void addBookToList(Long bookListId, Long bookId, Long userId) throws Exception;
+
+    /**
+     * 按书名添加书到书单
+     */
+    void addBookToListByTitle(Long bookListId, String bookTitle, Long userId) throws Exception;
     
     /**
      * 从书单移除书
@@ -37,5 +47,10 @@ public interface BookListService extends IService<BookList> {
      * 删除书单
      */
     void deleteBookList(Long bookListId, Long userId) throws Exception;
+
+    /**
+     * 获取用户主页可见书单
+     */
+    Object getProfileBookLists(Long profileUserId, Long viewerUserId);
 }
 

@@ -54,7 +54,13 @@ public class MockBackendService {
     public record BookDetail(Book book, RatingSummary ratingSummary, List<CommentItem> comments, List<CommentItem> replies, int favoriteCount) {
     }
 
-    public record UserBookList(long id, String owner, String title, String intro, List<Long> bookIds) {
+    public record UserBookList(long id, String owner, String title, String intro, List<Long> bookIds,
+                               Boolean publicVisible) {
+        public UserBookList {
+            if (publicVisible == null) {
+                publicVisible = true;
+            }
+        }
     }
 
     public record UserProfile(String username, List<CommentItem> comments, List<UserBookList> bookLists, int followingCount,
@@ -340,14 +346,32 @@ public class MockBackendService {
     }
 
     public synchronized UserBookList createBookList(String username, String title, String intro) {
+        return createBookList(username, title, intro, true);
+    }
+
+    public synchronized UserBookList createBookList(String username, String title, String intro, boolean publicVisible) {
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("书单标题不能为空");
         }
         UserBookList list = new UserBookList(listIdSeq.incrementAndGet(), username, title.trim(),
-                intro == null ? "" : intro.trim(), new ArrayList<>());
+                intro == null ? "" : intro.trim(), new ArrayList<>(), publicVisible);
         userBookLists.computeIfAbsent(username, key -> new ArrayList<>()).add(list);
         persistState();
         return list;
+    }
+
+    public synchronized void updateBookListVisibility(String username, long listId, boolean publicVisible) {
+        List<UserBookList> lists = userBookLists.getOrDefault(username, new ArrayList<>());
+        for (int i = 0; i < lists.size(); i++) {
+            UserBookList list = lists.get(i);
+            if (list.id() == listId) {
+                lists.set(i, new UserBookList(list.id(), list.owner(), list.title(), list.intro(),
+                        new ArrayList<>(list.bookIds()), publicVisible));
+                persistState();
+                return;
+            }
+        }
+        throw new IllegalArgumentException("书单不存在");
     }
 
     public synchronized void deleteBookList(String username, long listId) {
@@ -369,6 +393,11 @@ public class MockBackendService {
 
     public synchronized void addBookToBookList(String username, long listId, int bookId) {
         addBookToBookList(username, listId, (long) bookId);
+    }
+
+    public synchronized void addBookToBookList(String username, long listId, String bookTitle) {
+        Book book = findBookByTitle(bookTitle);
+        addBookToBookList(username, listId, book.id());
     }
 
     public synchronized void removeBookFromBookList(String username, long listId, long bookId) {
@@ -415,7 +444,9 @@ public class MockBackendService {
                 .filter(item -> item.user().equals(target))
                 .sorted(Comparator.comparing(CommentItem::time).reversed())
                 .toList();
-        List<UserBookList> lists = listBookLists(target);
+        List<UserBookList> lists = listBookLists(target).stream()
+                .filter(list -> Objects.equals(target, currentUser) || list.publicVisible())
+                .toList();
         int followingCount = listFollowing(target).size();
         int followerCount = listFollowers(target).size();
         boolean followed = followingMap.getOrDefault(currentUser, Set.of()).contains(target);
@@ -490,6 +521,32 @@ public class MockBackendService {
         books.put(book.id(), book);
         persistState();
         return book;
+    }
+
+    public synchronized Book findBookByTitle(String title) {
+        String normalized = title == null ? "" : title.trim();
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("图书名称不能为空");
+        }
+        List<Book> exactMatches = books.values().stream()
+                .filter(book -> book.title().equalsIgnoreCase(normalized))
+                .toList();
+        if (exactMatches.size() == 1) {
+            return exactMatches.getFirst();
+        }
+        if (exactMatches.size() > 1) {
+            throw new IllegalStateException("存在多本同名图书，请在图书详情页加入书单");
+        }
+        List<Book> containsMatches = books.values().stream()
+                .filter(book -> book.title().toLowerCase(Locale.ROOT).contains(normalized.toLowerCase(Locale.ROOT)))
+                .toList();
+        if (containsMatches.size() == 1) {
+            return containsMatches.getFirst();
+        }
+        if (containsMatches.isEmpty()) {
+            throw new IllegalArgumentException("未找到图书：" + normalized);
+        }
+        throw new IllegalStateException("匹配到多本图书，请输入完整书名");
     }
 
     public synchronized void deleteBook(int bookId) {
@@ -931,7 +988,8 @@ public class MockBackendService {
             for (Map.Entry<String, List<UserBookList>> entry : state.userBookLists().entrySet()) {
                 List<UserBookList> lists = new ArrayList<>();
                 for (UserBookList list : entry.getValue()) {
-                    lists.add(new UserBookList(list.id(), list.owner(), list.title(), list.intro(), new ArrayList<>(list.bookIds())));
+                    lists.add(new UserBookList(list.id(), list.owner(), list.title(), list.intro(),
+                            new ArrayList<>(list.bookIds()), list.publicVisible()));
                 }
                 userBookLists.put(entry.getKey(), lists);
             }

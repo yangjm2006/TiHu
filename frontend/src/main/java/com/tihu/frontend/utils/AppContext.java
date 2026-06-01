@@ -8,7 +8,8 @@ import javafx.stage.Stage;
 public final class AppContext {
     public enum BookDetailReturnTarget {
         BOOK_LIST,
-        FAVORITES
+        FAVORITES,
+        BOOK_LIST_DETAIL
     }
 
     private static final AppContext INSTANCE = new AppContext();

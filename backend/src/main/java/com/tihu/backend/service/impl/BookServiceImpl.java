@@ -154,6 +154,11 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
     }
 
     @Override
+    public List<String> getBookTagNames(Long bookId) {
+        return getBookTags(bookId).stream().map(Tag::getName).toList();
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void replaceBookTags(Long bookId, List<String> tagNames) {
         Book book = this.getById(bookId);

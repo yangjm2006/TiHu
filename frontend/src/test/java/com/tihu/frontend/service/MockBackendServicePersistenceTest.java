@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -68,6 +69,44 @@ class MockBackendServicePersistenceTest {
 
         assertThrows(IllegalStateException.class,
                 () -> service.deleteOwnComment(101, aliceComment.id(), "bob"));
+    }
+
+    @Test
+    void privateBookListsShouldOnlyAppearOnOwnersProfile() {
+        Path stateFile = tempDir.resolve("backend-state.json");
+        MockBackendService service = new MockBackendService(stateFile);
+
+        MockBackendService.UserBookList privateList =
+                service.createBookList("bob", "私密书单", "仅自己可见", false);
+        MockBackendService.UserBookList publicList =
+                service.createBookList("bob", "公开书单", "所有人可见", true);
+
+        MockBackendService.UserProfile viewedByAlice = service.getUserProfile("bob", "alice");
+        MockBackendService.UserProfile viewedByBob = service.getUserProfile("bob", "bob");
+
+        assertEquals(List.of(publicList.id()), viewedByAlice.bookLists().stream()
+                .filter(list -> list.id() == privateList.id() || list.id() == publicList.id())
+                .map(MockBackendService.UserBookList::id)
+                .toList());
+        assertEquals(2, viewedByBob.bookLists().stream()
+                .filter(list -> list.id() == privateList.id() || list.id() == publicList.id())
+                .count());
+
+        service.updateBookListVisibility("bob", privateList.id(), true);
+        assertEquals(2, service.getUserProfile("bob", "alice").bookLists().stream()
+                .filter(list -> list.id() == privateList.id() || list.id() == publicList.id())
+                .count());
+    }
+
+    @Test
+    void bookCanBeAddedToBookListByTitle() {
+        Path stateFile = tempDir.resolve("backend-state.json");
+        MockBackendService service = new MockBackendService(stateFile);
+        MockBackendService.UserBookList list = service.createBookList("bob", "待读", "", true);
+
+        service.addBookToBookList("bob", list.id(), "三体");
+
+        assertEquals(List.of(101L), service.getBookList("bob", list.id()).bookIds());
     }
 }
 

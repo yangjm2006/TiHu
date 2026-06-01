@@ -651,7 +651,9 @@
         "owner": "alice",
         "title": "科幻精选",
         "description": "公开书单",
-        "bookIds": [101, 102]
+        "bookIds": [101, 102],
+        "publicVisible": true,
+        "visibility": "PUBLIC"
       }
     ]
   }
@@ -665,10 +667,14 @@
 - 标题：`title`
 - 简介：`description`、`intro`
 - 图书 ID 列表：`bookIds`、`bookIdList`、`books`
+- 是否公开：`publicVisible`、`isPublic`、`public`、`visible`
+- 可见性枚举：`visibility`、`privacy`、`mode`，值为 `PUBLIC` 或 `PRIVATE`
+
+如果缺少可见性字段，前端按公开处理。
 
 ### 7.2 创建书单
 
-`POST /book-lists?title=科幻精选&description=公开书单`
+`POST /book-lists?title=科幻精选&description=公开书单&publicVisible=true&visibility=PUBLIC`
 
 请求体：无，前端发送空 JSON。
 
@@ -684,7 +690,9 @@
       "owner": "alice",
       "title": "科幻精选",
       "description": "公开书单",
-      "bookIds": []
+      "bookIds": [],
+      "publicVisible": true,
+      "visibility": "PUBLIC"
     }
   }
 }
@@ -698,19 +706,34 @@
 
 响应字段同书单对象。
 
-### 7.4 删除书单
+非所有者只能查看公开书单，访问私密书单时建议后端返回 `403`。
+前端打开他人的公开书单时会以只读模式展示，可以查看书单里的图书并打开图书详情，但不能添加、移除图书或修改可见性。
+
+### 7.4 修改书单可见性
+
+`PUT /book-lists/{listId}/visibility?publicVisible=false&visibility=PRIVATE`
+
+只有书单所有者可修改。`publicVisible=true` 表示公开，`false` 表示私密。
+
+### 7.5 删除书单
 
 `DELETE /book-lists/{listId}`
 
 成功响应：通用成功响应即可。
 
-### 7.5 添加图书到书单
+### 7.6 添加图书到书单
 
 `POST /book-lists/{listId}/books?bookId=101`
 
+或从书单详情页按书名添加：
+
+`POST /book-lists/{listId}/books?bookTitle=三体`
+
+图书详情页加入书单时，前端已知当前图书 ID，会使用 `bookId`。书单详情页用户输入图书名称，前端会优先使用 `bookTitle`；如果后端不支持，前端会尝试解析为 `bookId` 后调用旧接口。
+
 成功响应：通用成功响应即可。
 
-### 7.6 从书单移除图书
+### 7.7 从书单移除图书
 
 `DELETE /book-lists/{listId}/books?bookId=101`
 
@@ -750,7 +773,9 @@
         "owner": "bob",
         "title": "科幻精选",
         "description": "公开书单",
-        "bookIds": [101]
+        "bookIds": [101],
+        "publicVisible": true,
+        "visibility": "PUBLIC"
       }
     ]
   }
@@ -766,6 +791,9 @@
 - 当前用户是否已关注：`followedByCurrentUser`、`followed`
 - 评论：`comments`、`commentList`、`records`
 - 书单：`bookLists`、`lists`、`records`
+
+用户主页中的书单需要按当前登录用户过滤：查看自己主页返回公开和私密书单；查看他人主页只返回公开书单。
+前端支持在用户主页双击书单进入详情；自己的书单可编辑，他人的公开书单仅可查看。
 
 ### 8.2 用户名解析为用户 ID
 
@@ -1001,10 +1029,12 @@
 | 收藏 | POST | `/collections?bookId=...` |
 | 收藏 | DELETE | `/collections?bookId=...` |
 | 书单 | GET | `/book-lists?page=1&size=1000` |
-| 书单 | POST | `/book-lists?title=...&description=...` |
+| 书单 | POST | `/book-lists?title=...&description=...&publicVisible=...&visibility=...` |
 | 书单 | GET | `/book-lists/{listId}` |
+| 书单 | PUT | `/book-lists/{listId}/visibility?publicVisible=...&visibility=...` |
 | 书单 | DELETE | `/book-lists/{listId}` |
 | 书单 | POST | `/book-lists/{listId}/books?bookId=...` |
+| 书单 | POST | `/book-lists/{listId}/books?bookTitle=...` |
 | 书单 | DELETE | `/book-lists/{listId}/books?bookId=...` |
 | 关注 | POST | `/follows?followeeId=...` |
 | 关注 | POST | `/follows?followeeUsername=...` |

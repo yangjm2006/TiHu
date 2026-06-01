@@ -189,6 +189,40 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         this.updateById(user);
     }
 
+    @Override
+    public User updateProfile(Long userId, String currentUsername, String newUsername, String newPassword) throws Exception {
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new ApiException(404, "用户不存在");
+        }
+        if (StringUtils.hasText(currentUsername) && !user.getUsername().equals(currentUsername.trim())) {
+            throw new ApiException(403, "只能修改当前登录用户资料");
+        }
+
+        if (StringUtils.hasText(newUsername) && !newUsername.trim().equals(user.getUsername())) {
+            String finalUsername = newUsername.trim();
+            if (finalUsername.length() < Constants.USERNAME_MIN_LENGTH || finalUsername.length() > Constants.USERNAME_MAX_LENGTH) {
+                throw new ApiException(400, "用户名长度必须在2-10之间");
+            }
+            User existing = this.getUserByUsername(finalUsername);
+            if (existing != null && !existing.getId().equals(userId)) {
+                throw new ApiException(409, "用户名已存在");
+            }
+            user.setUsername(finalUsername);
+        }
+
+        if (StringUtils.hasText(newPassword)) {
+            String finalPassword = newPassword.trim();
+            if (!PASSWORD_PATTERN.matcher(finalPassword).matches()) {
+                throw new ApiException(400, "密码必须为6-12位，包含数字和英文字符");
+            }
+            user.setPassword(BCrypt.hashpw(finalPassword));
+        }
+
+        this.updateById(user);
+        return this.getById(userId);
+    }
+
     /**
      * 封禁用户
      */
@@ -214,6 +248,32 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new ApiException(404, "用户不存在");
         }
         
+        user.setStatus(0);
+        user.setBanExpireTime(null);
+        this.updateById(user);
+    }
+
+    @Override
+    public void banUserByUsername(String username, String until) {
+        User user = this.getUserByUsername(username);
+        if (user == null) {
+            throw new ApiException(404, "用户不存在");
+        }
+        user.setStatus(1);
+        if (StringUtils.hasText(until)) {
+            user.setBanExpireTime(LocalDateTime.parse(until.trim()));
+        } else {
+            user.setBanExpireTime(LocalDateTime.now().plusDays(7));
+        }
+        this.updateById(user);
+    }
+
+    @Override
+    public void unbanUserByUsername(String username) {
+        User user = this.getUserByUsername(username);
+        if (user == null) {
+            throw new ApiException(404, "用户不存在");
+        }
         user.setStatus(0);
         user.setBanExpireTime(null);
         this.updateById(user);
@@ -252,13 +312,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         profile.put("comments", comments);
 
-        // 获取该用户的公开书单列表
+        // 获取该用户对当前访问者可见的书单列表
         java.util.List<?> bookLists = new java.util.ArrayList<>();
         if (bookListService != null) {
             try {
-                LambdaQueryWrapper<BookList> bookListQueryWrapper = new LambdaQueryWrapper<>();
-                bookListQueryWrapper.eq(BookList::getUserId, user.getId());
-                bookLists = bookListService.list(bookListQueryWrapper);
+                Long currentUserId = Long.parseLong(StpUtil.getLoginId().toString());
+                Object visibleBookLists = bookListService.getProfileBookLists(user.getId(), currentUserId);
+                if (visibleBookLists instanceof java.util.List<?> list) {
+                    bookLists = list;
+                }
             } catch (Exception e) {
                 // 忽略异常，使用空列表
             }

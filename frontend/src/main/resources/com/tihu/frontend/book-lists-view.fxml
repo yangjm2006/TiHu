@@ -12,6 +12,7 @@
             <ListView fx:id="listView" prefHeight="500"/>
             <HBox spacing="8">
                 <Button text="打开" onAction="#onOpen"/>
+                <Button text="切换公开/私密" onAction="#onToggleVisibility"/>
                 <Button text="删除" onAction="#onDelete"/>
             </HBox>
         </VBox>
@@ -21,6 +22,7 @@
             <Label text="创建书单" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
             <TextField fx:id="titleField" promptText="标题"/>
             <TextArea fx:id="introArea" promptText="简介" prefRowCount="5" wrapText="true"/>
+            <CheckBox fx:id="publicCheckBox" text="公开书单" selected="true"/>
             <Button text="创建" onAction="#onCreate"/>
             <Label fx:id="messageLabel" wrapText="true"/>
         </VBox>

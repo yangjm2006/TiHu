@@ -32,6 +32,11 @@ public interface BookService extends IService<Book> {
     List<Tag> getBookTags(Long bookId);
 
     /**
+     * 获取图书标签名
+     */
+    List<String> getBookTagNames(Long bookId);
+
+    /**
      * 替换图书标签（按标签名保存）
      */
     void replaceBookTags(Long bookId, List<String> tagNames);

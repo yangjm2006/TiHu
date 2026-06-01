@@ -42,6 +42,12 @@
                     <Spinner fx:id="myScoreSpinner" prefWidth="120"/>
                     <Button text="提交评分" onAction="#onRate"/>
                 </HBox>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="加入书单："/>
+                    <ComboBox fx:id="bookListComboBox" prefWidth="220"/>
+                    <Button text="加入" onAction="#onAddToBookList"/>
+                </HBox>
             </VBox>
 
             <VBox spacing="10" style="-fx-padding: 14;">

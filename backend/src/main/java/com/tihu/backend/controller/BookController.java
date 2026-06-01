@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 图书相关接口
@@ -87,8 +88,9 @@ public class BookController {
         bookService.save(book);
         if (book.getTags() != null) {
             bookService.replaceBookTags(book.getId(), book.getTags());
+            book.setTags(bookService.getBookTagNames(book.getId()));
         }
-        return Result.success(book);
+        return Result.success(Map.of("book", book));
     }
 
     /**
@@ -117,7 +119,7 @@ public class BookController {
      */
     @GetMapping("/{id}/tags")
     public Result getBookTags(@PathVariable Long id) {
-        return Result.success(bookService.getBookTags(id));
+        return Result.success(bookService.getBookTagNames(id));
     }
 
     /**
@@ -139,8 +141,7 @@ public class BookController {
     public Result deleteBook(@PathVariable Long id) {
         Book book = bookService.getById(id);
         if (book != null) {
-            book.setIsDeleted(1);
-            bookService.updateById(book);
+            bookService.removeById(id);
         }
         return Result.success();
     }

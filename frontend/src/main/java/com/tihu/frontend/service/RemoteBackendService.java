@@ -304,11 +304,29 @@ public class RemoteBackendService extends MockBackendService {
 
     @Override
     public synchronized UserBookList createBookList(String username, String title, String intro) {
+        return createBookList(username, title, intro, true);
+    }
+
+    @Override
+    public synchronized UserBookList createBookList(String username, String title, String intro, boolean publicVisible) {
         return remoteOrFallback(() -> {
-            JsonNode data = requestData("POST", "/book-lists" + query(mapOf("title", title, "description", intro)), null);
+            JsonNode data = requestData("POST", "/book-lists" + query(mapOf(
+                    "title", title,
+                    "description", intro,
+                    "publicVisible", publicVisible,
+                    "visibility", publicVisible ? "PUBLIC" : "PRIVATE"
+            )), null);
             UserBookList list = parseBookList(firstPresent(data, "bookList", "data", "list"));
-            return list != null ? list : super.createBookList(username, title, intro);
-        }, () -> super.createBookList(username, title, intro));
+            return list != null ? list : super.createBookList(username, title, intro, publicVisible);
+        }, () -> super.createBookList(username, title, intro, publicVisible));
+    }
+
+    @Override
+    public synchronized void updateBookListVisibility(String username, long listId, boolean publicVisible) {
+        runRemoteOrFallback(() -> requestData("PUT", "/book-lists/" + listId + "/visibility" + query(mapOf(
+                "publicVisible", publicVisible,
+                "visibility", publicVisible ? "PUBLIC" : "PRIVATE"
+        )), null), () -> super.updateBookListVisibility(username, listId, publicVisible));
     }
 
     @Override
@@ -338,6 +356,15 @@ public class RemoteBackendService extends MockBackendService {
     @Override
     public synchronized void addBookToBookList(String username, long listId, int bookId) {
         addBookToBookList(username, listId, (long) bookId);
+    }
+
+    @Override
+    public synchronized void addBookToBookList(String username, long listId, String bookTitle) {
+        runRemoteOrFallback(() -> requestData("POST", "/book-lists/" + listId + "/books" + query(Map.of("bookTitle", bookTitle)), null),
+                () -> {
+                    long bookId = resolveBookIdByTitle(bookTitle);
+                    addBookToBookList(username, listId, bookId);
+                });
     }
 
     @Override
@@ -852,6 +879,30 @@ public class RemoteBackendService extends MockBackendService {
         return result;
     }
 
+    private long resolveBookIdByTitle(String bookTitle) {
+        String normalized = bookTitle == null ? "" : bookTitle.trim();
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("图书名称不能为空");
+        }
+        List<BookCard> cards = listBooks(normalized, List.of(), 1, 1000).items();
+        List<BookCard> exactMatches = cards.stream()
+                .filter(card -> card.title().equalsIgnoreCase(normalized))
+                .toList();
+        if (exactMatches.size() == 1) {
+            return exactMatches.getFirst().id();
+        }
+        if (exactMatches.size() > 1) {
+            throw new IllegalStateException("存在多本同名图书，请在图书详情页加入书单");
+        }
+        if (cards.size() == 1) {
+            return cards.getFirst().id();
+        }
+        if (cards.isEmpty()) {
+            return super.findBookByTitle(normalized).id();
+        }
+        throw new IllegalStateException("匹配到多本图书，请输入完整书名");
+    }
+
     private List<CommentItem> topLevelComments(List<CommentItem> comments) {
         return comments.stream().filter(item -> item.parentId() == null).toList();
     }
@@ -1120,7 +1171,25 @@ public class RemoteBackendService extends MockBackendService {
                 }
             }
         }
-        return new UserBookList(id, owner, title, intro, bookIds);
+        boolean publicVisible = parsePublicVisible(node);
+        return new UserBookList(id, owner, title, intro, bookIds, publicVisible);
+    }
+
+    private boolean parsePublicVisible(JsonNode node) {
+        JsonNode publicNode = firstPresent(node, "publicVisible", "isPublic", "public", "visible");
+        if (publicNode != null && !publicNode.isMissingNode() && !publicNode.isNull()) {
+            if (publicNode.isBoolean()) {
+                return publicNode.asBoolean();
+            }
+            String value = publicNode.asText();
+            return "true".equalsIgnoreCase(value) || "1".equals(value) || "PUBLIC".equalsIgnoreCase(value)
+                    || "公开".equals(value);
+        }
+        String visibility = text(firstPresent(node, "visibility", "privacy", "mode"));
+        if (visibility == null || visibility.isBlank()) {
+            return true;
+        }
+        return !"PRIVATE".equalsIgnoreCase(visibility) && !"私密".equals(visibility);
     }
 
     private FollowItem parseFollowItem(JsonNode node) {
@@ -1225,7 +1294,8 @@ public class RemoteBackendService extends MockBackendService {
                 UserBookList list = parseBookList(item);
                 if (list != null) {
                     if (list.owner().isBlank()) {
-                        list = new UserBookList(list.id(), username, list.title(), list.intro(), list.bookIds());
+                        list = new UserBookList(list.id(), username, list.title(), list.intro(), list.bookIds(),
+                                list.publicVisible());
                     }
                     lists.add(list);
                 }

@@ -1,11 +1,17 @@
 package com.tihu.backend.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.tihu.backend.common.ApiException;
+import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.User;
 import com.tihu.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 用户相关接口
@@ -70,6 +76,21 @@ public class UserController {
     public Result getCurrentUser() {
         Long userId = Long.parseLong(StpUtil.getLoginId().toString());
         User user = userService.getById(userId);
+        return Result.success(user);
+    }
+
+    /**
+     * 修改当前用户资料
+     * PUT /api/users/profile
+     * PUT /api/users/me
+     */
+    @PutMapping({"/profile", "/me"})
+    public Result updateProfile(@RequestBody(required = false) Map<String, Object> body) throws Exception {
+        Long userId = Long.parseLong(StpUtil.getLoginId().toString());
+        String currentUsername = textValue(body, "currentUsername", "username");
+        String newUsername = textValue(body, "newUsername");
+        String newPassword = textValue(body, "newPassword");
+        User user = userService.updateProfile(userId, currentUsername, newUsername, newPassword);
         return Result.success(user);
     }
 
@@ -144,8 +165,41 @@ public class UserController {
      */
     @GetMapping("/admin/bans")
     public Result getBanList() {
-        Object bans = userService.getBanList();
-        return Result.success(bans);
+        return Result.success(toBanPage(userService.getBanList(), 1, 1000));
+    }
+
+    /**
+     * 管理员接口：获取封禁列表
+     * GET /api/users/bans?page=1&size=1000
+     */
+    @GetMapping("/bans")
+    public Result getBanList(@RequestParam(defaultValue = "1") int page,
+                             @RequestParam(defaultValue = "1000") int size) {
+        StpUtil.checkRole("ADMIN");
+        return Result.success(toBanPage(userService.getBanList(), page, size));
+    }
+
+    /**
+     * 管理员接口：封禁用户
+     * POST /api/users/ban?username=alice&until=2026-06-01T12:00:00
+     */
+    @PostMapping("/ban")
+    public Result banUserByUsername(@RequestParam String username,
+                                    @RequestParam(required = false) String until) {
+        StpUtil.checkRole("ADMIN");
+        userService.banUserByUsername(username, until);
+        return Result.success();
+    }
+
+    /**
+     * 管理员接口：解封用户
+     * POST /api/users/unban?username=alice
+     */
+    @PostMapping("/unban")
+    public Result unbanUserByUsername(@RequestParam String username) {
+        StpUtil.checkRole("ADMIN");
+        userService.unbanUserByUsername(username);
+        return Result.success();
     }
 
     /**
@@ -170,5 +224,40 @@ public class UserController {
 
     private String resolveField(String bodyValue, String requestParamValue) {
         return bodyValue != null && !bodyValue.isBlank() ? bodyValue : requestParamValue;
+    }
+
+    private String textValue(Map<String, Object> body, String... names) {
+        if (body == null) {
+            return null;
+        }
+        for (String name : names) {
+            Object value = body.get(name);
+            if (value != null) {
+                return value.toString();
+            }
+        }
+        return null;
+    }
+
+    private PageData<Object> toBanPage(Object source, int page, int size) {
+        if (!(source instanceof List<?> users)) {
+            throw new ApiException(500, "封禁列表格式错误");
+        }
+        List<Object> records = users.stream().map(item -> {
+            User user = (User) item;
+            Map<String, Object> record = new HashMap<>();
+            record.put("username", user.getUsername());
+            record.put("user", user.getUsername());
+            record.put("bannedUntil", user.getBanExpireTime());
+            record.put("until", user.getBanExpireTime());
+            return record;
+        }).<Object>map(record -> record).toList();
+        int safePage = Math.max(1, page);
+        int safeSize = Math.max(1, size);
+        long total = records.size();
+        long pages = Math.max(1, (total + safeSize - 1) / safeSize);
+        int from = Math.min((safePage - 1) * safeSize, records.size());
+        int to = Math.min(from + safeSize, records.size());
+        return new PageData<>(records.subList(from, to), total, pages, safePage, safeSize);
     }
 }

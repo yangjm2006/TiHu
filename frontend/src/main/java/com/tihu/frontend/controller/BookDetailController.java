@@ -5,6 +5,7 @@ import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Spinner;
@@ -27,6 +28,7 @@ public class BookDetailController implements MainContentController {
     @FXML private Label favoriteCountLabel;
     @FXML private TextArea distributionArea;
     @FXML private Spinner<Integer> myScoreSpinner;
+    @FXML private ComboBox<String> bookListComboBox;
     @FXML private ListView<String> commentListView;
     @FXML private TextArea commentInputArea;
     @FXML private Label messageLabel;
@@ -34,6 +36,7 @@ public class BookDetailController implements MainContentController {
     private final AppContext context = AppContext.getInstance();
     private MainController mainController;
     private final List<MockBackendService.CommentItem> flattenComments = new ArrayList<>();
+    private List<MockBackendService.UserBookList> myBookLists = List.of();
     private long bookId;
 
     @Override
@@ -151,6 +154,23 @@ public class BookDetailController implements MainContentController {
     }
 
     @FXML
+    private void onAddToBookList() {
+        try {
+            int idx = bookListComboBox == null ? -1 : bookListComboBox.getSelectionModel().getSelectedIndex();
+            if (idx < 0 || idx >= myBookLists.size()) {
+                messageLabel.setText("请先选择书单");
+                return;
+            }
+            MockBackendService.UserBookList selected = myBookLists.get(idx);
+            context.service().addBookToBookList(context.username(), selected.id(), bookId);
+            refresh();
+            messageLabel.setText("已加入书单：" + selected.title());
+        } catch (Exception ex) {
+            messageLabel.setText(ex.getMessage());
+        }
+    }
+
+    @FXML
     private void onUpVote() {
         voteSelected(1);
     }
@@ -165,6 +185,10 @@ public class BookDetailController implements MainContentController {
         if (mainController != null) {
             if (context.bookDetailReturnTarget() == BookDetailReturnTarget.FAVORITES) {
                 mainController.onFavorites();
+            } else if (context.bookDetailReturnTarget() == BookDetailReturnTarget.BOOK_LIST_DETAIL
+                    && context.selectedBookListId() != null) {
+                String owner = context.selectedBookListOwner() == null ? context.username() : context.selectedBookListOwner();
+                mainController.openBookListDetail(owner, context.selectedBookListId());
             } else {
                 mainController.onBooks();
             }
@@ -217,11 +241,18 @@ public class BookDetailController implements MainContentController {
         }
         commentListView.getItems().setAll(textItems);
         updateFavoriteButton();
+        updateBookListOptions();
     }
 
     private void updateNavigationText() {
         if (backButton != null) {
-            backButton.setText(context.bookDetailReturnTarget() == BookDetailReturnTarget.FAVORITES ? "← 返回收藏" : "← 返回列表");
+            if (context.bookDetailReturnTarget() == BookDetailReturnTarget.FAVORITES) {
+                backButton.setText("← 返回收藏");
+            } else if (context.bookDetailReturnTarget() == BookDetailReturnTarget.BOOK_LIST_DETAIL) {
+                backButton.setText("← 返回书单");
+            } else {
+                backButton.setText("← 返回列表");
+            }
         }
     }
 
@@ -246,6 +277,20 @@ public class BookDetailController implements MainContentController {
     private String formatComment(MockBackendService.CommentItem item, boolean reply) {
         String prefix = reply ? "  -> " : "";
         return prefix + item.user() + "：" + item.content() + "  [赞" + item.upVotes() + "/踩" + item.downVotes() + "]";
+    }
+
+    private void updateBookListOptions() {
+        if (bookListComboBox == null) {
+            return;
+        }
+        int selectedIndex = bookListComboBox.getSelectionModel().getSelectedIndex();
+        myBookLists = context.service().listBookLists(context.username());
+        bookListComboBox.getItems().setAll(myBookLists.stream()
+                .map(list -> list.title() + "（" + (list.publicVisible() ? "公开" : "私密") + "）")
+                .toList());
+        if (!myBookLists.isEmpty()) {
+            bookListComboBox.getSelectionModel().select(Math.min(Math.max(selectedIndex, 0), myBookLists.size() - 1));
+        }
     }
 
     private String commentContent() {
