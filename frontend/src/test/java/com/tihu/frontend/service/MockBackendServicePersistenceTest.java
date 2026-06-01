@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -107,6 +108,19 @@ class MockBackendServicePersistenceTest {
         service.addBookToBookList("bob", list.id(), "三体");
 
         assertEquals(List.of(101L), service.getBookList("bob", list.id()).bookIds());
+    }
+
+    @Test
+    void bannedUserShouldSeeUnbanTimeWhenLoggingIn() {
+        Path stateFile = tempDir.resolve("backend-state.json");
+        MockBackendService service = new MockBackendService(stateFile);
+        LocalDateTime until = LocalDateTime.now().plusHours(2);
+
+        service.banUser("bob", until);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> service.login("bob", "Bob12345"));
+        assertEquals("您已被封禁，解封时间是 " + until, ex.getMessage());
     }
 }
 

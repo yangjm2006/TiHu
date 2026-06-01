@@ -145,6 +145,20 @@
 - 角色：`data.userInfo.role`、`data.userInfo.userRole` 或 `data.role`
 - 角色值：`USER` / `ADMIN`
 
+如果用户被封禁，后端应返回非 200 状态并带解封时间：
+
+```json
+{
+  "code": 403,
+  "message": "该用户已被封禁",
+  "data": {
+    "bannedUntil": "2026-06-02T12:00:00"
+  }
+}
+```
+
+前端会显示：`您已被封禁，解封时间是 2026-06-02T12:00:00`。解封时间字段兼容 `bannedUntil`、`banExpireTime`、`until`、`unbanTime`。
+
 ### 2.4 修改个人信息
 
 优先调用：
@@ -980,13 +994,13 @@
 前端读取：
 
 - 用户名：`username`、`user`
-- 封禁截止时间：`bannedUntil`、`until`
+- 封禁截止时间：`bannedUntil`、`banExpireTime`、`until`、`unbanTime`
 
 ### 11.2 封禁用户
 
 `POST /users/ban?username=alice&until=2026-06-01T12:00:00`
 
-`until` 为空时表示后端自行决定规则；前端可能传空。
+前端管理员页面输入封禁小时数后，会计算出 `until` 传给后端。`until` 为 ISO-8601 本地时间字符串。
 
 成功响应：通用成功响应即可。
 
@@ -995,6 +1009,8 @@
 `POST /users/unban?username=alice`
 
 成功响应：通用成功响应即可。
+
+前端支持从封禁列表选中用户后直接解除封禁。
 
 ## 12. 前端实际调用接口清单
 

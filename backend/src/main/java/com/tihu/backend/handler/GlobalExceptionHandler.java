@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ApiException.class)
     public Result handleApiException(ApiException e) {
-        return Result.error(e.getCode(), e.getMessage(), null);
+        return Result.error(e.getCode(), e.getMessage(), e.getData());
     }
 
     /**

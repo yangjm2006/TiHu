@@ -165,6 +165,7 @@ public class UserController {
      */
     @GetMapping("/admin/bans")
     public Result getBanList() {
+        StpUtil.checkRole("ADMIN");
         return Result.success(toBanPage(userService.getBanList(), 1, 1000));
     }
 
@@ -249,7 +250,9 @@ public class UserController {
             record.put("username", user.getUsername());
             record.put("user", user.getUsername());
             record.put("bannedUntil", user.getBanExpireTime());
+            record.put("banExpireTime", user.getBanExpireTime());
             record.put("until", user.getBanExpireTime());
+            record.put("unbanTime", user.getBanExpireTime());
             return record;
         }).<Object>map(record -> record).toList();
         int safePage = Math.max(1, page);

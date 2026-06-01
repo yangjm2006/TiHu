@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -104,7 +106,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 检查用户是否被封禁
         if (user.getStatus() == 1) {
             if (user.getBanExpireTime() != null && LocalDateTime.now().isBefore(user.getBanExpireTime())) {
-                throw new ApiException(403, "该用户已被封禁");
+                Map<String, Object> data = new HashMap<>();
+                data.put("bannedUntil", user.getBanExpireTime());
+                data.put("banExpireTime", user.getBanExpireTime());
+                data.put("until", user.getBanExpireTime());
+                data.put("unbanTime", user.getBanExpireTime());
+                throw new ApiException(403, "该用户已被封禁", data);
             } else if (user.getBanExpireTime() != null) {
                 // 解封
                 user.setStatus(0);
@@ -360,7 +367,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getStatus, 1)
                .eq(User::getIsDeleted, 0)
-               .isNotNull(User::getBanExpireTime);
+               .isNotNull(User::getBanExpireTime)
+               .gt(User::getBanExpireTime, LocalDateTime.now())
+               .orderByAsc(User::getBanExpireTime);
 
         return this.list(wrapper);
     }

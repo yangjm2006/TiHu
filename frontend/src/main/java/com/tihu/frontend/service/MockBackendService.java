@@ -134,7 +134,11 @@ public class MockBackendService {
             throw new IllegalArgumentException("用户名或密码错误");
         }
         if (user.bannedUntil != null && user.bannedUntil.isAfter(LocalDateTime.now())) {
-            throw new IllegalStateException("账号已被封禁至 " + user.bannedUntil);
+            throw new IllegalStateException(formatBanLoginMessage(user.bannedUntil));
+        }
+        if (user.bannedUntil != null) {
+            user.bannedUntil = null;
+            persistState();
         }
         return user.role;
     }
@@ -493,6 +497,9 @@ public class MockBackendService {
 
     public synchronized void banUser(String username, LocalDateTime until) {
         UserEntity user = getRequiredUser(username);
+        if (until == null || !until.isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("封禁截止时间必须晚于当前时间");
+        }
         user.bannedUntil = until;
         persistState();
     }
@@ -827,6 +834,10 @@ public class MockBackendService {
 
     private String valueOrEmpty(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String formatBanLoginMessage(LocalDateTime bannedUntil) {
+        return "您已被封禁，解封时间是 " + bannedUntil;
     }
 
     private void moveUserData(String from, String to) {

@@ -36,7 +36,7 @@ public class RemoteBackendService extends MockBackendService {
 
     @Override
     public synchronized Role login(String username, String password) {
-        return remoteOrFallback(() -> remoteLogin(username, password), () -> super.login(username, password));
+        return remoteOrFallbackUnlessApiRejected(() -> remoteLogin(username, password), () -> super.login(username, password));
     }
 
     @Override
@@ -956,7 +956,8 @@ public class RemoteBackendService extends MockBackendService {
         JsonNode codeNode = firstPresent(node, "code", "status");
         if (codeNode != null && codeNode.isNumber() && codeNode.asInt() != 200) {
             String message = text(firstPresent(node, "message", "msg", "errorMessage"));
-            throw new RemoteApiException(message == null || message.isBlank() ? "远程接口请求失败" : message);
+            JsonNode data = firstPresent(node, "data", "result");
+            throw new RemoteApiException(formatRemoteErrorMessage(message, data));
         }
         JsonNode data = firstPresent(node, "data", "result");
         return data == null ? node : data;
@@ -1014,6 +1015,16 @@ public class RemoteBackendService extends MockBackendService {
         }
     }
 
+    private <T> T remoteOrFallbackUnlessApiRejected(ThrowingSupplier<T> remote, Supplier<T> fallback) {
+        try {
+            return remote.get();
+        } catch (RemoteApiException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            return fallback.get();
+        }
+    }
+
     private void runRemoteOrFallback(ThrowingRunnable remote, Runnable fallback) {
         try {
             remote.run();
@@ -1050,6 +1061,20 @@ public class RemoteBackendService extends MockBackendService {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String formatRemoteErrorMessage(String message, JsonNode data) {
+        String text = message == null || message.isBlank() ? "远程接口请求失败" : message;
+        if (text.contains("封禁")) {
+            String until = text(firstPresent(data, "bannedUntil", "banExpireTime", "until", "unbanTime"));
+            if (until != null && !until.isBlank()) {
+                return "您已被封禁，解封时间是 " + until;
+            }
+            if (!text.contains("您已被封禁")) {
+                return "您已被封禁" + (text.contains("解封时间") ? "" : "，请联系管理员确认解封时间");
+            }
+        }
+        return text;
     }
 
     private Role parseRole(String value) {
@@ -1267,7 +1292,7 @@ public class RemoteBackendService extends MockBackendService {
             return null;
         }
         String username = safe(text(firstPresent(node, "username", "user")));
-        LocalDateTime until = parseDateTime(text(firstPresent(node, "bannedUntil", "until")));
+        LocalDateTime until = parseDateTime(text(firstPresent(node, "bannedUntil", "banExpireTime", "until", "unbanTime")));
         if (username.isBlank()) {
             return null;
         }

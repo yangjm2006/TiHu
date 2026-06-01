@@ -104,6 +104,34 @@ class RemoteBackendServiceApiContractTest {
     }
 
     @Test
+    void shouldSurfaceRemoteBanLoginErrorsWithUnbanTime() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> service.login("banned", "Banned123"));
+
+        assertEquals("您已被封禁，解封时间是 2026-06-02T12:00:00", ex.getMessage());
+        assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.equals("POST /users/login")));
+    }
+
+    @Test
+    void shouldCallBanAndUnbanApisByUsername() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        service.banUser("alice", java.time.LocalDateTime.parse("2026-06-02T12:00:00"));
+        service.unbanUser("alice");
+
+        assertTrue(apiClient.requestLog.stream().anyMatch(line ->
+                line.startsWith("POST /users/ban?")
+                        && line.contains("username=alice")
+                        && line.contains("until=2026-06-02T12%3A00")));
+        assertTrue(apiClient.requestLog.stream().anyMatch(line ->
+                line.equals("POST /users/unban?username=alice")));
+    }
+
+    @Test
     void shouldLoadOtherUserProfileAndFollowListsByUsername() {
         FakeApiClient apiClient = new FakeApiClient();
         RemoteBackendService service = new RemoteBackendService(apiClient);
@@ -181,6 +209,9 @@ class RemoteBackendServiceApiContractTest {
             JsonNode node = read(body);
             String username = node.path("username").asText();
             String password = node.path("password").asText();
+            if ("banned".equals(username)) {
+                return envelope(403, "该用户已被封禁", Map.of("bannedUntil", "2026-06-02T12:00:00"));
+            }
             UserRecord user = users.get(username);
             if (user == null || !user.password.equals(password)) {
                 return envelope(400, "用户名或密码错误", null);
