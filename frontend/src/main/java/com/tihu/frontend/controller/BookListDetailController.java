@@ -3,6 +3,7 @@ package com.tihu.frontend.controller;
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
+import com.tihu.frontend.utils.AppContext.BookListDetailReturnTarget;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -127,7 +128,7 @@ public class BookListDetailController implements MainContentController {
     @FXML
     private void onBack() {
         if (mainController != null) {
-            if (owner != null && !owner.equals(context.username())) {
+            if (context.bookListDetailReturnTarget() == BookListDetailReturnTarget.USER_PROFILE) {
                 mainController.openUserProfile(owner);
             } else {
                 mainController.onBookLists();

@@ -2,6 +2,7 @@ package com.tihu.frontend.controller;
 
 import com.tihu.frontend.MainApplication;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.AppContext.BookListDetailReturnTarget;
 import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -87,12 +88,17 @@ public class MainController {
     }
 
     public void openBookListDetail(long listId) {
-        openBookListDetail(context.username(), listId);
+        openBookListDetail(context.username(), listId, BookListDetailReturnTarget.BOOK_LISTS);
     }
 
     public void openBookListDetail(String owner, long listId) {
+        openBookListDetail(owner, listId, BookListDetailReturnTarget.BOOK_LISTS);
+    }
+
+    public void openBookListDetail(String owner, long listId, BookListDetailReturnTarget returnTarget) {
         context.setSelectedBookListId(listId);
         context.setSelectedBookListOwner(owner);
+        context.setBookListDetailReturnTarget(returnTarget);
         loadContent("book-list-detail-view.fxml");
     }
 

@@ -12,6 +12,11 @@ public final class AppContext {
         BOOK_LIST_DETAIL
     }
 
+    public enum BookListDetailReturnTarget {
+        BOOK_LISTS,
+        USER_PROFILE
+    }
+
     private static final AppContext INSTANCE = new AppContext();
 
     private final MockBackendService service = new RemoteBackendService();
@@ -26,6 +31,7 @@ public final class AppContext {
     private String viewedProfileUsername;
     private String followListTargetUsername;
     private BookDetailReturnTarget bookDetailReturnTarget = BookDetailReturnTarget.BOOK_LIST;
+    private BookListDetailReturnTarget bookListDetailReturnTarget = BookListDetailReturnTarget.BOOK_LISTS;
     private String bookListTitleKeyword = "";
     private String bookListTagsText = "";
     private int bookListPage = 1;
@@ -89,6 +95,7 @@ public final class AppContext {
         viewedProfileUsername = null;
         followListTargetUsername = null;
         bookDetailReturnTarget = BookDetailReturnTarget.BOOK_LIST;
+        bookListDetailReturnTarget = BookListDetailReturnTarget.BOOK_LISTS;
         bookListTitleKeyword = "";
         bookListTagsText = "";
         bookListPage = 1;
@@ -150,6 +157,16 @@ public final class AppContext {
 
     public void setBookDetailReturnTarget(BookDetailReturnTarget bookDetailReturnTarget) {
         this.bookDetailReturnTarget = bookDetailReturnTarget == null ? BookDetailReturnTarget.BOOK_LIST : bookDetailReturnTarget;
+    }
+
+    public BookListDetailReturnTarget bookListDetailReturnTarget() {
+        return bookListDetailReturnTarget;
+    }
+
+    public void setBookListDetailReturnTarget(BookListDetailReturnTarget bookListDetailReturnTarget) {
+        this.bookListDetailReturnTarget = bookListDetailReturnTarget == null
+                ? BookListDetailReturnTarget.BOOK_LISTS
+                : bookListDetailReturnTarget;
     }
 
     public String bookListTitleKeyword() {

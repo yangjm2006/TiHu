@@ -2,6 +2,7 @@ package com.tihu.frontend.controller;
 
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.AppContext.BookListDetailReturnTarget;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -81,7 +82,7 @@ public class UserProfileController implements MainContentController {
         }
         if (mainController != null) {
             MockBackendService.UserBookList selected = profileBookLists.get(idx);
-            mainController.openBookListDetail(viewedUsername, selected.id());
+            mainController.openBookListDetail(viewedUsername, selected.id(), BookListDetailReturnTarget.USER_PROFILE);
         }
     }
 

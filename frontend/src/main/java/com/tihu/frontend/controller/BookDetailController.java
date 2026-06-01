@@ -188,7 +188,7 @@ public class BookDetailController implements MainContentController {
             } else if (context.bookDetailReturnTarget() == BookDetailReturnTarget.BOOK_LIST_DETAIL
                     && context.selectedBookListId() != null) {
                 String owner = context.selectedBookListOwner() == null ? context.username() : context.selectedBookListOwner();
-                mainController.openBookListDetail(owner, context.selectedBookListId());
+                mainController.openBookListDetail(owner, context.selectedBookListId(), context.bookListDetailReturnTarget());
             } else {
                 mainController.onBooks();
             }
