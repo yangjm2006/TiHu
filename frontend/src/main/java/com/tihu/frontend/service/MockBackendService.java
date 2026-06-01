@@ -649,15 +649,22 @@ public class MockBackendService {
 
     private void deleteOwnCommentInternal(long bookId, long commentId, String username) {
         List<CommentItem> list = commentMap.getOrDefault(bookId, new ArrayList<>());
-        boolean canDelete = list.stream().anyMatch(item -> item.id() == commentId && item.user().equals(username));
-        if (canDelete) {
-            deleteCommentAndReplies(list, commentId);
+        boolean exists = list.stream().anyMatch(item -> item.id() == commentId);
+        if (!exists) {
+            throw new IllegalArgumentException("评论不存在");
         }
+        boolean canDelete = list.stream().anyMatch(item -> item.id() == commentId && item.user().equals(username));
+        if (!canDelete) {
+            throw new IllegalStateException("只能撤回自己的评论");
+        }
+        deleteCommentAndReplies(list, commentId);
     }
 
     private void adminDeleteCommentInternal(long bookId, long commentId) {
         List<CommentItem> list = commentMap.getOrDefault(bookId, new ArrayList<>());
-        deleteCommentAndReplies(list, commentId);
+        if (!deleteCommentAndReplies(list, commentId)) {
+            throw new IllegalArgumentException("评论不存在");
+        }
     }
 
     private void deleteCommentByIdInternal(long commentId) {
@@ -666,6 +673,7 @@ public class MockBackendService {
                 return;
             }
         }
+        throw new IllegalArgumentException("评论不存在");
     }
 
     private boolean deleteCommentAndReplies(List<CommentItem> list, long commentId) {

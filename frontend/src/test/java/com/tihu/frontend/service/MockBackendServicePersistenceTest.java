@@ -55,5 +55,19 @@ class MockBackendServicePersistenceTest {
         assertEquals(0, afterDelete.comments().stream().filter(comment -> comment.id() == topLevel.id()).count());
         assertEquals(0, afterDelete.replies().stream().filter(reply -> topLevel.id() == reply.parentId()).count());
     }
+
+    @Test
+    void userCannotWithdrawAnotherUsersComment() {
+        Path stateFile = tempDir.resolve("backend-state.json");
+        MockBackendService service = new MockBackendService(stateFile);
+
+        MockBackendService.CommentItem aliceComment = service.getBookDetail(101, "bob").comments().stream()
+                .filter(comment -> "alice".equals(comment.user()))
+                .findFirst()
+                .orElseThrow();
+
+        assertThrows(IllegalStateException.class,
+                () -> service.deleteOwnComment(101, aliceComment.id(), "bob"));
+    }
 }
 

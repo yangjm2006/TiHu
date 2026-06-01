@@ -125,19 +125,29 @@ public class BookDetailController implements MainContentController {
 
     @FXML
     private void onDeleteOwnComment() {
-        int idx = commentListView.getSelectionModel().getSelectedIndex();
-        if (idx < 0 || idx >= flattenComments.size()) {
-            messageLabel.setText("请先选择评论");
-            return;
-        }
-        MockBackendService.CommentItem selected = flattenComments.get(idx);
-        if (context.isAdmin()) {
-            context.service().adminDeleteComment(selected.id());
-        } else {
+        try {
+            int idx = commentListView.getSelectionModel().getSelectedIndex();
+            if (idx < 0 || idx >= flattenComments.size()) {
+                messageLabel.setText("请先选择评论");
+                return;
+            }
+            MockBackendService.CommentItem selected = flattenComments.get(idx);
+            if (context.isAdmin()) {
+                context.service().adminDeleteComment(selected.id());
+                refresh();
+                messageLabel.setText("评论已删除");
+                return;
+            }
+            if (!Objects.equals(selected.user(), context.username())) {
+                messageLabel.setText("只能撤回自己的评论");
+                return;
+            }
             context.service().deleteOwnComment(bookId, selected.id(), context.username());
+            refresh();
+            messageLabel.setText("评论已撤回");
+        } catch (Exception ex) {
+            messageLabel.setText(ex.getMessage());
         }
-        refresh();
-        messageLabel.setText("评论已删除");
     }
 
     @FXML

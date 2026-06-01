@@ -255,7 +255,7 @@ public class RemoteBackendService extends MockBackendService {
 
     @Override
     public synchronized void deleteOwnComment(long bookId, long commentId, String username) {
-        runRemoteOrFallback(() -> requestData("DELETE", "/comments/" + commentId, null),
+        runRemoteOrFallbackUnlessApiRejected(() -> requestData("DELETE", "/comments/" + commentId, null),
                 () -> super.deleteOwnComment(bookId, commentId, username));
     }
 
@@ -266,7 +266,7 @@ public class RemoteBackendService extends MockBackendService {
 
     @Override
     public synchronized void adminDeleteComment(long bookId, long commentId) {
-        runRemoteOrFallback(() -> requestData("DELETE", "/comments/admin/" + commentId, null),
+        runRemoteOrFallbackUnlessApiRejected(() -> requestData("DELETE", "/comments/admin/" + commentId, null),
                 () -> super.adminDeleteComment(bookId, commentId));
     }
 
@@ -277,7 +277,7 @@ public class RemoteBackendService extends MockBackendService {
 
     @Override
     public synchronized void adminDeleteComment(long commentId) {
-        runRemoteOrFallback(() -> requestData("DELETE", "/comments/admin/" + commentId, null),
+        runRemoteOrFallbackUnlessApiRejected(() -> requestData("DELETE", "/comments/admin/" + commentId, null),
                 () -> super.adminDeleteComment(commentId));
     }
 
@@ -905,7 +905,7 @@ public class RemoteBackendService extends MockBackendService {
         JsonNode codeNode = firstPresent(node, "code", "status");
         if (codeNode != null && codeNode.isNumber() && codeNode.asInt() != 200) {
             String message = text(firstPresent(node, "message", "msg", "errorMessage"));
-            throw new IllegalStateException(message == null || message.isBlank() ? "远程接口请求失败" : message);
+            throw new RemoteApiException(message == null || message.isBlank() ? "远程接口请求失败" : message);
         }
         JsonNode data = firstPresent(node, "data", "result");
         return data == null ? node : data;
@@ -971,6 +971,16 @@ public class RemoteBackendService extends MockBackendService {
         }
     }
 
+    private void runRemoteOrFallbackUnlessApiRejected(ThrowingRunnable remote, Runnable fallback) {
+        try {
+            remote.run();
+        } catch (RemoteApiException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            fallback.run();
+        }
+    }
+
     @FunctionalInterface
     private interface ThrowingSupplier<T> {
         T get() throws Exception;
@@ -979,6 +989,12 @@ public class RemoteBackendService extends MockBackendService {
     @FunctionalInterface
     private interface ThrowingRunnable {
         void run() throws Exception;
+    }
+
+    private static final class RemoteApiException extends IllegalStateException {
+        private RemoteApiException(String message) {
+            super(message);
+        }
     }
 
     private String safe(String value) {
@@ -1077,9 +1093,9 @@ public class RemoteBackendService extends MockBackendService {
         String user = safe(text(firstPresent(node, "user", "username", "nickname")));
         String content = safe(text(firstPresent(node, "content", "text")));
         LocalDateTime time = parseDateTime(text(firstPresent(node, "time", "createTime", "createdAt")));
-        Long parentId = longNullable(firstPresent(node, "parentId", "replyTo"));
-        int upVotes = intValue(firstPresent(node, "upVotes", "upvoteCount", "likes"));
-        int downVotes = intValue(firstPresent(node, "downVotes", "downvoteCount", "dislikes"));
+        Long parentId = longNullable(firstPresent(node, "parentId", "parentCommentId", "replyTo"));
+        int upVotes = intValue(firstPresent(node, "upVotes", "upvoteCount", "likes", "likeCount"));
+        int downVotes = intValue(firstPresent(node, "downVotes", "downvoteCount", "dislikes", "dislikeCount"));
         return new CommentItem(id, user, content, time, parentId, upVotes, downVotes);
     }
 

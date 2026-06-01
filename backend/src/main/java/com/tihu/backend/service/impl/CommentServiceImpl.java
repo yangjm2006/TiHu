@@ -117,17 +117,16 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     }
 
     private void deleteWithReplies(Comment comment) {
-        comment.setIsDeleted(1);
-        this.updateById(comment);
-
         if (comment.getParentCommentId() == null) {
             LambdaQueryWrapper<Comment> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(Comment::getParentCommentId, comment.getId())
                 .eq(Comment::getIsDeleted, 0);
-            for (Comment reply : this.list(wrapper)) {
-                reply.setIsDeleted(1);
-                this.updateById(reply);
-            }
+            this.remove(wrapper);
+        }
+
+        boolean removed = this.removeById(comment.getId());
+        if (!removed) {
+            throw new ApiException(404, "评论不存在或已删除");
         }
     }
 

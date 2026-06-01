@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RemoteBackendServiceApiContractTest {
@@ -91,6 +92,18 @@ class RemoteBackendServiceApiContractTest {
     }
 
     @Test
+    void shouldSurfaceRemoteWithdrawPermissionErrors() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> service.deleteOwnComment(100, 999, "alice"));
+
+        assertEquals("只能撤回自己的评论", ex.getMessage());
+        assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.equals("DELETE /comments/999")));
+    }
+
+    @Test
     void shouldLoadOtherUserProfileAndFollowListsByUsername() {
         FakeApiClient apiClient = new FakeApiClient();
         RemoteBackendService service = new RemoteBackendService(apiClient);
@@ -143,6 +156,7 @@ class RemoteBackendServiceApiContractTest {
                 case "POST /users/register" -> register(body);
                 case "POST /users/login" -> login(body);
                 case "POST /books" -> createBook(body);
+                case "DELETE /comments/999" -> envelope(403, "只能撤回自己的评论", null);
                 default -> path.startsWith("/books?") ? listBooks()
                         : path.startsWith("/collections?") ? listCollections()
                         : path.startsWith("/comments/book/") ? listBookComments()
@@ -247,7 +261,7 @@ class RemoteBackendServiceApiContractTest {
                                     "username", "bob",
                                     "content", "同意",
                                     "createTime", "2026-05-31T12:05:00",
-                                    "parentId", 501,
+                                    "parentCommentId", 501,
                                     "upVotes", 2,
                                     "downVotes", 0
                             )
