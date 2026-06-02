@@ -29,6 +29,8 @@ public class CollectionServiceImpl extends ServiceImpl<CollectionMapper, Collect
 
     @Override
     public void collectBook(Long userId, Long bookId) {
+        requireExistingBook(bookId);
+
         Collection existing = this.getOne(new LambdaQueryWrapper<Collection>().eq(Collection::getUserId, userId).eq(Collection::getBookId, bookId));
         if (existing != null) {
             throw new ApiException(409, "已收藏过该图书");
@@ -112,6 +114,13 @@ public class CollectionServiceImpl extends ServiceImpl<CollectionMapper, Collect
     @Override
     public boolean isCollected(Long userId, Long bookId) {
         return this.getOne(new LambdaQueryWrapper<Collection>().eq(Collection::getUserId, userId).eq(Collection::getBookId, bookId)) != null;
+    }
+
+    private void requireExistingBook(Long bookId) {
+        Book book = bookService.getById(bookId);
+        if (book == null || Integer.valueOf(1).equals(book.getIsDeleted())) {
+            throw new ApiException(404, "图书不存在");
+        }
     }
 }
 
