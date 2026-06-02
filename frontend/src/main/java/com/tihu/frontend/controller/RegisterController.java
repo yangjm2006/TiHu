@@ -8,6 +8,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Button;
 import javafx.stage.Stage;
 
 public class RegisterController {
@@ -15,8 +16,14 @@ public class RegisterController {
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
     @FXML private Label messageLabel;
+    @FXML private Button themeToggleButton;
 
     private final AppContext context = AppContext.getInstance();
+
+    @FXML
+    public void initialize() {
+        updateThemeToggleText();
+    }
 
     @FXML
     private void onSubmit() {
@@ -55,6 +62,18 @@ public class RegisterController {
     private void setMessageStyle(String styleClass) {
         messageLabel.getStyleClass().removeAll("error-text", "success-text");
         messageLabel.getStyleClass().add(styleClass);
+    }
+
+    @FXML
+    private void onToggleTheme() {
+        AppTheme.toggle(usernameField.getScene());
+        updateThemeToggleText();
+    }
+
+    private void updateThemeToggleText() {
+        if (themeToggleButton != null) {
+            themeToggleButton.setText(AppTheme.toggleButtonText());
+        }
     }
 }
 

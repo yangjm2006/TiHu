@@ -10,6 +10,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Button;
 import javafx.stage.Stage;
 import javafx.concurrent.Task;
 
@@ -18,8 +19,14 @@ public class LoginController {
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
     @FXML private Label messageLabel;
+    @FXML private Button themeToggleButton;
 
     private final AppContext context = AppContext.getInstance();
+
+    @FXML
+    public void initialize() {
+        updateThemeToggleText();
+    }
 
     @FXML
     private void onLogin() {
@@ -80,6 +87,18 @@ public class LoginController {
             stage.setScene(AppTheme.scene(loader.load(), width, height));
         } catch (Exception ex) {
             messageLabel.setText("页面跳转失败：" + ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onToggleTheme() {
+        AppTheme.toggle(usernameField.getScene());
+        updateThemeToggleText();
+    }
+
+    private void updateThemeToggleText() {
+        if (themeToggleButton != null) {
+            themeToggleButton.setText(AppTheme.toggleButtonText());
         }
     }
 }

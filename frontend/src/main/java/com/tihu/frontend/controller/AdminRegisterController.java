@@ -8,6 +8,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Button;
 import javafx.stage.Stage;
 
 public class AdminRegisterController {
@@ -17,8 +18,14 @@ public class AdminRegisterController {
     @FXML private PasswordField passwordField;
     @FXML private TextField inviteCodeField;
     @FXML private Label messageLabel;
+    @FXML private Button themeToggleButton;
 
     private final AppContext context = AppContext.getInstance();
+
+    @FXML
+    public void initialize() {
+        updateThemeToggleText();
+    }
 
     @FXML
     private void onSubmit() {
@@ -71,6 +78,18 @@ public class AdminRegisterController {
             return "邀请码错误，注册失败";
         }
         return message == null || message.isBlank() ? "注册失败" : message;
+    }
+
+    @FXML
+    private void onToggleTheme() {
+        AppTheme.toggle(usernameField.getScene());
+        updateThemeToggleText();
+    }
+
+    private void updateThemeToggleText() {
+        if (themeToggleButton != null) {
+            themeToggleButton.setText(AppTheme.toggleButtonText());
+        }
     }
 }
 

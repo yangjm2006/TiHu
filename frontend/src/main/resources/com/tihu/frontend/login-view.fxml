@@ -25,5 +25,6 @@
         </HBox>
 
         <Label fx:id="messageLabel" styleClass="error-text" wrapText="true"/>
+        <Button fx:id="themeToggleButton" text="夜间模式" onAction="#onToggleTheme" styleClass="button-secondary"/>
     </VBox>
 </AnchorPane>

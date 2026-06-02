@@ -15,6 +15,7 @@
             <TextField fx:id="searchField" promptText="搜索书名" prefWidth="220"/>
             <Button text="搜索" onAction="#onSearch" styleClass="button-primary"/>
             <Label fx:id="userLabel" styleClass="status-text"/>
+            <Button fx:id="themeToggleButton" text="夜间模式" onAction="#onToggleTheme" styleClass="button-secondary"/>
             <Button text="退出登录" onAction="#onLogout" styleClass="button-secondary"/>
         </HBox>
     </top>

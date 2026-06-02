@@ -10,6 +10,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -21,6 +22,7 @@ public class MainController {
     @FXML private StackPane contentPane;
     @FXML private Label userLabel;
     @FXML private Label adminLabel;
+    @FXML private Button themeToggleButton;
     @FXML private VBox adminBox;
 
     private final AppContext context = AppContext.getInstance();
@@ -38,6 +40,7 @@ public class MainController {
         adminLabel.setManaged(isAdmin);
         adminBox.setVisible(isAdmin);
         adminBox.setManaged(isAdmin);
+        updateThemeToggleText();
         showHome();
     }
 
@@ -142,6 +145,12 @@ public class MainController {
     @FXML private void onAdminComments() { loadContent("admin-comments-view.fxml"); }
 
     @FXML
+    private void onToggleTheme() {
+        AppTheme.toggle(contentPane.getScene());
+        updateThemeToggleText();
+    }
+
+    @FXML
     private void onLogout() {
         try {
             context.logout();
@@ -160,6 +169,12 @@ public class MainController {
     public void refreshUserInfo() {
         String roleText = context.role() == null ? "未知角色" : context.role().name();
         userLabel.setText("当前用户：" + context.username() + " ｜ 角色：" + roleText);
+    }
+
+    private void updateThemeToggleText() {
+        if (themeToggleButton != null) {
+            themeToggleButton.setText(AppTheme.toggleButtonText());
+        }
     }
 
     private void showPlaceholder(String title) {
