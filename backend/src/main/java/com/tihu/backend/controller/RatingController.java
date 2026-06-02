@@ -38,7 +38,11 @@ public class RatingController {
     public Result getMyRating(@RequestParam Long bookId) {
         Long userId = Long.parseLong(StpUtil.getLoginId().toString());
         Rating rating = ratingService.getUserRating(userId, bookId);
-        return Result.success(rating);
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("score", rating == null ? null : rating.getScore());
+        data.put("myScore", rating == null ? null : rating.getScore());
+        data.put("rating", rating);
+        return Result.success(data);
     }
 
     /**

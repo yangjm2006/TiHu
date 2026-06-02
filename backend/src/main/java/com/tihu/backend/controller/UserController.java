@@ -6,6 +6,7 @@ import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.entity.User;
 import com.tihu.backend.service.UserService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,11 +47,13 @@ public class UserController {
     @PostMapping("/login")
     public Result login(@RequestBody(required = false) User user,
                         @RequestParam(required = false) String username,
-                        @RequestParam(required = false) String password) throws Exception {
+                        @RequestParam(required = false) String password,
+                        HttpServletResponse response) throws Exception {
         String finalUsername = resolveField(user != null ? user.getUsername() : null, username);
         String finalPassword = resolveField(user != null ? user.getPassword() : null, password);
         User loggedIn = userService.login(finalUsername, finalPassword);
         String token = StpUtil.getTokenValue();
+        response.setHeader("Authorization", token);
 
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("userInfo", loggedIn);

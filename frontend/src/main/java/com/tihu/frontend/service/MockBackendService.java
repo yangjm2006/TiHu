@@ -48,7 +48,12 @@ public class MockBackendService {
     public record RatingSummary(double average, int count, Map<Integer, Integer> distribution, Integer myScore) {
     }
 
-    public record CommentItem(long id, String user, String content, LocalDateTime time, Long parentId, int upVotes, int downVotes) {
+    public record CommentItem(long id, String user, String content, LocalDateTime time, Long parentId, int upVotes,
+                              int downVotes, Long bookId, String bookTitle) {
+        public CommentItem(long id, String user, String content, LocalDateTime time, Long parentId, int upVotes,
+                           int downVotes) {
+            this(id, user, content, time, parentId, upVotes, downVotes, null, null);
+        }
     }
 
     public record BookDetail(Book book, RatingSummary ratingSummary, List<CommentItem> comments, List<CommentItem> replies, int favoriteCount) {
@@ -443,8 +448,9 @@ public class MockBackendService {
 
     public synchronized UserProfile getUserProfile(String target, String currentUser) {
         getRequiredUser(target);
-        List<CommentItem> comments = commentMap.values().stream()
-                .flatMap(Collection::stream)
+        List<CommentItem> comments = commentMap.entrySet().stream()
+                .flatMap(entry -> entry.getValue().stream()
+                        .map(item -> withBookInfo(item, entry.getKey())))
                 .filter(item -> item.user().equals(target))
                 .sorted(Comparator.comparing(CommentItem::time).reversed())
                 .toList();
@@ -455,6 +461,13 @@ public class MockBackendService {
         int followerCount = listFollowers(target).size();
         boolean followed = followingMap.getOrDefault(currentUser, Set.of()).contains(target);
         return new UserProfile(target, comments, lists, followingCount, followerCount, followed);
+    }
+
+    private CommentItem withBookInfo(CommentItem item, long bookId) {
+        Book book = books.get(bookId);
+        String title = book == null ? null : book.title();
+        return new CommentItem(item.id(), item.user(), item.content(), item.time(), item.parentId(),
+                item.upVotes(), item.downVotes(), bookId, title);
     }
 
     public synchronized void sendMessage(String from, String to, String content) {

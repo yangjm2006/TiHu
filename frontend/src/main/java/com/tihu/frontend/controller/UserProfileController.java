@@ -128,7 +128,7 @@ public class UserProfileController implements MainContentController {
             relationLabel.setText("关注 " + profile.followingCount() + " | 粉丝 " + profile.followerCount() +
                     " | 我是否已关注：" + (currentFollowed ? "是" : "否"));
             commentsListView.getItems().setAll(profile.comments().stream()
-                    .map(item -> item.time() + " - " + item.content())
+                    .map(this::formatProfileComment)
                     .toList());
             profileBookLists = profile.bookLists();
             bookListsView.getItems().setAll(profile.bookLists().stream()
@@ -148,5 +148,12 @@ public class UserProfileController implements MainContentController {
 
     private String normalizedViewedUsername() {
         return usernameField.getText() == null ? "" : usernameField.getText().trim();
+    }
+
+    private String formatProfileComment(MockBackendService.CommentItem item) {
+        String bookText = item.bookTitle() == null || item.bookTitle().isBlank()
+                ? (item.bookId() == null ? "未知图书" : "图书ID " + item.bookId())
+                : "《" + item.bookTitle() + "》";
+        return bookText + " - " + item.content();
     }
 }

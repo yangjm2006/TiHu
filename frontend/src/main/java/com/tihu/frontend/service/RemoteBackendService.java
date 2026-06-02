@@ -871,7 +871,7 @@ public class RemoteBackendService extends MockBackendService {
                 for (CommentItem reply : parseComments(replies)) {
                     result.add(reply.parentId() == null
                             ? new CommentItem(reply.id(), reply.user(), reply.content(), reply.time(), comment.id(),
-                            reply.upVotes(), reply.downVotes())
+                            reply.upVotes(), reply.downVotes(), reply.bookId(), reply.bookTitle())
                             : reply);
                 }
             }
@@ -1172,7 +1172,16 @@ public class RemoteBackendService extends MockBackendService {
         Long parentId = longNullable(firstPresent(node, "parentId", "parentCommentId", "replyTo"));
         int upVotes = intValue(firstPresent(node, "upVotes", "upvoteCount", "likes", "likeCount"));
         int downVotes = intValue(firstPresent(node, "downVotes", "downvoteCount", "dislikes", "dislikeCount"));
-        return new CommentItem(id, user, content, time, parentId, upVotes, downVotes);
+        JsonNode bookNode = firstPresent(node, "book", "bookInfo");
+        Long bookId = longNullable(firstPresent(node, "bookId", "book_id"));
+        if (bookId == null && bookNode != null) {
+            bookId = longNullable(firstPresent(bookNode, "id", "bookId", "book_id"));
+        }
+        String bookTitle = safe(text(firstPresent(node, "bookTitle", "title")));
+        if (bookTitle.isBlank() && bookNode != null) {
+            bookTitle = safe(text(firstPresent(bookNode, "title", "bookTitle")));
+        }
+        return new CommentItem(id, user, content, time, parentId, upVotes, downVotes, bookId, bookTitle);
     }
 
     private UserBookList parseBookList(JsonNode node) {

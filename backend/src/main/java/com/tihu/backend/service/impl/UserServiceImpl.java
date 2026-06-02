@@ -6,9 +6,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tihu.backend.common.ApiException;
 import com.tihu.backend.common.Constants;
+import com.tihu.backend.entity.Book;
 import com.tihu.backend.entity.BookList;
 import com.tihu.backend.entity.Comment;
 import com.tihu.backend.entity.User;
+import com.tihu.backend.mapper.BookMapper;
 import com.tihu.backend.mapper.UserMapper;
 import com.tihu.backend.service.UserService;
 import com.tihu.backend.service.BookListService;
@@ -39,6 +41,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired(required = false)
     private FollowService followService;
+
+    @Autowired(required = false)
+    private BookMapper bookMapper;
 
     /**
      * 用户注册
@@ -312,7 +317,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 commentQueryWrapper.eq(Comment::getUserId, user.getId())
                         .eq(Comment::getIsDeleted, 0)
                         .orderByDesc(Comment::getCreateTime);
-                comments = commentService.list(commentQueryWrapper);
+                comments = commentService.list(commentQueryWrapper).stream()
+                        .map(comment -> toProfileCommentRecord(comment, user))
+                        .toList();
             } catch (Exception e) {
                 // 忽略异常，使用空列表
             }
@@ -357,6 +364,35 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         profile.put("followedByCurrentUser", followedByCurrentUser);
 
         return profile;
+    }
+
+    private Map<String, Object> toProfileCommentRecord(Comment comment, User user) {
+        Book book = bookMapper == null ? null : bookMapper.selectById(comment.getBookId());
+
+        Map<String, Object> record = new HashMap<>();
+        record.put("id", comment.getId());
+        record.put("commentId", comment.getId());
+        record.put("userId", comment.getUserId());
+        record.put("username", user.getUsername());
+        record.put("user", user.getUsername());
+        record.put("bookId", comment.getBookId());
+        record.put("bookTitle", book == null ? null : book.getTitle());
+        record.put("content", comment.getContent());
+        record.put("text", comment.getContent());
+        record.put("createTime", comment.getCreateTime());
+        record.put("time", comment.getCreateTime());
+        record.put("createdAt", comment.getCreateTime());
+        record.put("parentId", comment.getParentCommentId());
+        record.put("parentCommentId", comment.getParentCommentId());
+        if (book != null) {
+            Map<String, Object> bookInfo = new HashMap<>();
+            bookInfo.put("id", book.getId());
+            bookInfo.put("bookId", book.getId());
+            bookInfo.put("title", book.getTitle());
+            bookInfo.put("bookTitle", book.getTitle());
+            record.put("bookInfo", bookInfo);
+        }
+        return record;
     }
 
     /**

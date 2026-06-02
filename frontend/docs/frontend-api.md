@@ -777,6 +777,8 @@
       {
         "id": 501,
         "username": "bob",
+        "bookId": 101,
+        "bookTitle": "三体",
         "content": "这本书不错",
         "createTime": "2026-05-31T12:00:00"
       }
@@ -804,10 +806,12 @@
 - 粉丝数：`followerCount`、`followers`
 - 当前用户是否已关注：`followedByCurrentUser`、`followed`
 - 评论：`comments`、`commentList`、`records`
+- 用户主页评论所属图书：推荐返回 `bookTitle` 和 `bookId`；前端也兼容嵌套 `bookInfo.title` / `bookInfo.id`
 - 书单：`bookLists`、`lists`、`records`
 
 用户主页中的书单需要按当前登录用户过滤：查看自己主页返回公开和私密书单；查看他人主页只返回公开书单。
 前端支持在用户主页双击书单进入详情；自己的书单可编辑，他人的公开书单仅可查看。
+用户主页评论列表展示“评论的是哪本书 + 评论内容”，不再展示评论时间；后端应在评论记录中返回图书标题，否则前端只能退回显示图书 ID。
 
 ### 8.2 用户名解析为用户 ID
 
