@@ -33,6 +33,7 @@
 
                 <Label text="评分汇总" styleClass="section-title"/>
                 <Label fx:id="ratingSummaryLabel" text="平均分：暂无评分" styleClass="status-text"/>
+                <HBox fx:id="ratingStarsBox" spacing="4" alignment="CENTER_LEFT" styleClass="rating-stars"/>
                 <Label fx:id="favoriteCountLabel" text="收藏人数：0人" styleClass="status-text"/>
                 <TextArea fx:id="distributionArea"
                           editable="false"

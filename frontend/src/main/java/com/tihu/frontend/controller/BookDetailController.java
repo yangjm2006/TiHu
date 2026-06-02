@@ -11,6 +11,10 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.shape.Polygon;
+import javafx.scene.shape.Rectangle;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +29,7 @@ public class BookDetailController implements MainContentController {
     @FXML private Label metaLabel;
     @FXML private TextArea descArea;
     @FXML private Label ratingSummaryLabel;
+    @FXML private HBox ratingStarsBox;
     @FXML private Label favoriteCountLabel;
     @FXML private TextArea distributionArea;
     @FXML private Spinner<Integer> myScoreSpinner;
@@ -38,6 +43,9 @@ public class BookDetailController implements MainContentController {
     private final List<MockBackendService.CommentItem> flattenComments = new ArrayList<>();
     private List<MockBackendService.UserBookList> myBookLists = List.of();
     private long bookId;
+    private static final int STAR_COUNT = 5;
+    private static final double SCORE_PER_STAR = 2.0;
+    private static final double STAR_SIZE = 26.0;
 
     @Override
     public void setMainController(MainController mainController) {
@@ -219,6 +227,7 @@ public class BookDetailController implements MainContentController {
         MockBackendService.RatingSummary summary = detail.ratingSummary();
         String avgText = summary.count() == 0 ? "暂无评分" : String.format("%.1f", summary.average());
         ratingSummaryLabel.setText("平均分：" + avgText + "（" + summary.count() + "人）");
+        updateRatingStars(summary.count() == 0 ? 0 : summary.average());
         if (favoriteCountLabel != null) {
             favoriteCountLabel.setText("收藏人数：" + detail.favoriteCount() + "人");
         }
@@ -272,6 +281,49 @@ public class BookDetailController implements MainContentController {
             }
         }
         return sb.toString();
+    }
+
+    private void updateRatingStars(double averageScore) {
+        if (ratingStarsBox == null) {
+            return;
+        }
+        ratingStarsBox.getChildren().clear();
+        double safeScore = Math.max(0, Math.min(10, averageScore));
+        for (int i = 0; i < STAR_COUNT; i++) {
+            double starStartScore = i * SCORE_PER_STAR;
+            double fillRatio = Math.max(0, Math.min(1, (safeScore - starStartScore) / SCORE_PER_STAR));
+            ratingStarsBox.getChildren().add(createRatingStar(fillRatio));
+        }
+    }
+
+    private StackPane createRatingStar(double fillRatio) {
+        Polygon emptyStar = createStarShape();
+        emptyStar.getStyleClass().add("rating-star-empty");
+
+        Polygon filledStar = createStarShape();
+        filledStar.getStyleClass().add("rating-star-fill");
+        filledStar.setClip(new Rectangle(STAR_SIZE * fillRatio, STAR_SIZE));
+
+        StackPane starPane = new StackPane(emptyStar, filledStar);
+        starPane.setMinSize(STAR_SIZE, STAR_SIZE);
+        starPane.setPrefSize(STAR_SIZE, STAR_SIZE);
+        return starPane;
+    }
+
+    private Polygon createStarShape() {
+        double center = STAR_SIZE / 2.0;
+        double outerRadius = STAR_SIZE / 2.0;
+        double innerRadius = outerRadius * 0.45;
+        Polygon star = new Polygon();
+        for (int i = 0; i < 10; i++) {
+            double angle = Math.toRadians(-90 + i * 36);
+            double radius = i % 2 == 0 ? outerRadius : innerRadius;
+            star.getPoints().addAll(
+                    center + Math.cos(angle) * radius,
+                    center + Math.sin(angle) * radius
+            );
+        }
+        return star;
     }
 
     private String formatComment(MockBackendService.CommentItem item, boolean reply) {

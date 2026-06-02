@@ -117,6 +117,18 @@
     -fx-text-fill: #5D8730;
 }
 
+.rating-stars {
+    -fx-padding: 2 0 4 0;
+}
+
+.rating-star-empty {
+    -fx-fill: #C3CDCB;
+}
+
+.rating-star-fill {
+    -fx-fill: #F4B942;
+}
+
 .form-grid {
     -fx-hgap: 12;
     -fx-vgap: 12;
