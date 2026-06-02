@@ -17,6 +17,11 @@ public interface BookListService extends IService<BookList> {
      * 获取用户的书单列表
      */
     Page<Object> getUserBookLists(Long userId, int pageNum, int pageSize);
+
+    /**
+     * 获取当前用户可见的书单列表：自己的全部书单 + 他人的公开书单
+     */
+    Page<Object> getVisibleBookLists(Long viewerUserId, int pageNum, int pageSize);
     
     /**
      * 获取书单详情（含书籍列表）

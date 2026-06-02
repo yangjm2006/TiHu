@@ -39,7 +39,7 @@ public class BookListController {
     @GetMapping
     public Result getMyBookLists(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         Long userId = Long.parseLong(StpUtil.getLoginId().toString());
-        Page<Object> result = bookListService.getUserBookLists(userId, page, size);
+        Page<Object> result = bookListService.getVisibleBookLists(userId, page, size);
         return Result.success(PageData.of(result));
     }
 

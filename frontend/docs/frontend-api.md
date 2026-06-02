@@ -37,7 +37,14 @@
 - 数据字段：`data` 或 `result`
 - 错误信息字段：`message`、`msg`、`errorMessage`
 
-如果 `code/status` 存在且不是 `200`，前端认为远程接口失败，会展示错误信息并回退本地 mock。
+如果 `code/status` 存在且不是 `200`，前端认为远程接口失败，会展示错误信息。默认开发模式下，部分网络异常会回退本地 mock；联调/生产可开启严格远程模式禁用回退。
+
+严格远程模式开关：
+
+- 环境变量：`TIHU_REMOTE_STRICT=true`
+- JVM 参数：`-Dtihu.remote.strict=true`
+
+开启后，远程接口请求失败会直接抛错，不再回退本地 mock，便于发现后端接口问题。
 
 ### 1.3 分页响应
 
@@ -193,15 +200,46 @@
 
 ### 3.1 图书列表
 
-`GET /books?page=1&size=1000&sort=default`
+`GET /books?page=1&size=10&sort=default&keyword=三体&title=三体&tags=科幻&tags=宇宙`
+
+图书列表、普通用户图书搜索、管理员图书管理都使用该接口。后端应按查询条件、排序、分页参数返回当前页数据。
+
+后端必须在数据库/服务端完成搜索、标签过滤、排序和分页。处理顺序建议为：
+
+1. 按 `keyword` 或 `title` 过滤书名。
+2. 按 `tags` 过滤标签。
+3. 按 `sort` 排序。
+4. 按 `page` 和 `size` 截取当前页。
+
+不能先分页再过滤，否则前端页码、总数和搜索结果会不准确。
+
+查询参数：
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `page` | 是 | 页码，从 1 开始 |
+| `size` | 是 | 每页数量 |
+| `sort` | 否 | 排序，见下方排序参数 |
+| `keyword` | 否 | 书名关键字，按书名模糊搜索 |
+| `title` | 否 | 书名关键字，含义同 `keyword` |
+| `tags` | 否 | 标签，可重复传多个；多个标签按 AND 语义过滤，即图书必须同时包含所有传入标签 |
+
+`keyword` 和 `title` 可能同时出现，后端按其中任意一个非空值处理即可；如果两者都非空且值相同，不要重复叠加条件。
 
 排序参数：
 
-- `default`
-- `rating_desc`
-- `title_asc`
+- `default`：默认排序，建议按创建时间或 ID 倒序/正序保持稳定。
+- `rating_desc`：按平均评分从高到低排序；评分相同建议用书名或 ID 做稳定次序。
+- `title_asc`：按书名升序排序。
 
-前端会在本地再按当前页码做分页，所以这里默认请求较大的 `size=1000`。
+请求示例：
+
+```text
+GET /books?page=1&size=10&sort=default
+GET /books?page=1&size=10&sort=default&keyword=三体&title=三体
+GET /books?page=1&size=10&sort=default&tags=科幻&tags=宇宙
+GET /books?page=2&size=10&sort=rating_desc&keyword=三体&title=三体&tags=科幻
+```
 
 成功响应：
 
@@ -238,7 +276,7 @@
     "total": 1,
     "pages": 1,
     "current": 1,
-    "size": 1000
+    "size": 10
   }
 }
 ```
@@ -253,13 +291,21 @@
 
 如果图书字段嵌套在 `bookInfo`、`book`、`data` 内，前端也会读取。
 
+分页字段要求：
+
+- `records`：当前页图书，不是全部图书。
+- `total`：过滤后的总图书数量。
+- `pages`：过滤后的总页数。
+- `current`：当前页码，应等于请求中的 `page`，除非后端做了越界修正。
+- `size`：当前页大小，应等于请求中的 `size`。
+
 ### 3.2 按标签搜索图书
 
 `GET /books/search-by-tags?tags=科幻&tags=宇宙&sort=default&page=1&size=1000`
 
 响应格式同图书列表。
 
-前端会额外在本地按标题关键字和标签做一次过滤，所以后端可以只保证标签搜索正确。
+该接口现在作为兼容接口保留。推荐后端优先在 `GET /books` 中直接支持 `tags`、`keyword/title`、`sort`、`page`、`size`，前端会优先按 `GET /books` 的分页结果展示。
 
 ### 3.3 图书详情
 

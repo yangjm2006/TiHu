@@ -17,6 +17,11 @@ public interface BookService extends IService<Book> {
     Page<Book> getBooks(int pageNum, int pageSize, String sort);
 
     /**
+     * 按书名、标签、排序组合查询图书，先过滤再分页
+     */
+    Page<Book> searchBooks(String keyword, List<String> tags, int pageNum, int pageSize, String sort);
+
+    /**
      * 按书名搜索
      */
     Page<Book> searchByTitle(String keyword, int pageNum, int pageSize, String sort);

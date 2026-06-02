@@ -21,7 +21,6 @@ import org.springframework.util.StringUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @Service
 public class BookListServiceImpl extends ServiceImpl<BookListMapper, BookList> implements BookListService {
@@ -63,6 +62,20 @@ public class BookListServiceImpl extends ServiceImpl<BookListMapper, BookList> i
     }
 
     @Override
+    public Page<Object> getVisibleBookLists(Long viewerUserId, int pageNum, int pageSize) {
+        LambdaQueryWrapper<BookList> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(q -> q.eq(BookList::getUserId, viewerUserId)
+                .or()
+                .eq(BookList::getIsPublic, true)
+                .or()
+                .isNull(BookList::getIsPublic))
+            .orderByDesc(BookList::getCreateTime);
+
+        Page<BookList> page = this.page(new Page<>(pageNum, pageSize), wrapper);
+        return toBookListPage(page);
+    }
+
+    @Override
     public Object getBookListDetail(Long bookListId, Long currentUserId) {
         BookList bookList = this.getById(bookListId);
         if (bookList == null) {
@@ -88,7 +101,7 @@ public class BookListServiceImpl extends ServiceImpl<BookListMapper, BookList> i
         requireOwnedBookList(bookListId, userId, "无权修改他人书单");
 
         Book book = bookMapper.selectById(bookId);
-        if (book == null) {
+        if (book == null || Integer.valueOf(1).equals(book.getIsDeleted())) {
             throw new ApiException(404, "图书不存在");
         }
 
@@ -191,16 +204,19 @@ public class BookListServiceImpl extends ServiceImpl<BookListMapper, BookList> i
 
     private Map<String, Object> toBookListRecord(BookList bookList) {
         User owner = userMapper.selectById(bookList.getUserId());
-        List<Long> bookIds = bookListItemMapper.selectList(new LambdaQueryWrapper<BookListItem>()
+        List<Book> visibleBooks = bookListItemMapper.selectList(new LambdaQueryWrapper<BookListItem>()
                 .eq(BookListItem::getBookListId, bookList.getId())
                 .orderByAsc(BookListItem::getSortOrder)
                 .orderByAsc(BookListItem::getId))
             .stream()
             .map(BookListItem::getBookId)
-            .toList();
-        List<Map<String, Object>> bookInfos = bookIds.stream()
             .map(bookMapper::selectById)
-            .filter(Objects::nonNull)
+            .filter(book -> book != null && !Integer.valueOf(1).equals(book.getIsDeleted()))
+            .toList();
+        List<Long> bookIds = visibleBooks.stream()
+            .map(Book::getId)
+            .toList();
+        List<Map<String, Object>> bookInfos = visibleBooks.stream()
             .map(book -> {
                 Map<String, Object> data = new HashMap<>();
                 data.put("id", book.getId());
@@ -229,6 +245,8 @@ public class BookListServiceImpl extends ServiceImpl<BookListMapper, BookList> i
         record.put("bookIdList", bookIds);
         record.put("books", bookIds);
         record.put("bookInfos", bookInfos);
+        record.put("bookCount", bookIds.size());
+        record.put("count", bookIds.size());
         record.put("publicVisible", publicVisible);
         record.put("isPublic", publicVisible);
         record.put("public", publicVisible);

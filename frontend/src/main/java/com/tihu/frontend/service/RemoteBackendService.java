@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public class RemoteBackendService extends MockBackendService {
     private final ApiClient apiClient;
     private final ObjectMapper mapper = new ObjectMapper();
+    private final boolean strictRemoteMode = strictRemoteMode();
 
     private Long currentUserId;
     private String currentUsername;
@@ -143,15 +144,9 @@ public class RemoteBackendService extends MockBackendService {
 
     public synchronized BookListPage listBooks(String titleKeyword, List<String> tags, int page, int pageSize, BookSortMode sortMode) {
         return remoteOrFallback(() -> {
-            List<BookCard> catalog = fetchCatalog(titleKeyword, tags, sortMode);
-            int safePage = Math.max(1, page);
-            int safePageSize = Math.max(1, pageSize);
-            int totalItems = catalog.size();
-            int totalPages = Math.max(1, (int) Math.ceil(totalItems / (double) safePageSize));
-            int from = Math.min((safePage - 1) * safePageSize, totalItems);
-            int to = Math.min(from + safePageSize, totalItems);
-            return new BookListPage(new ArrayList<>(catalog.subList(from, to)), safePage, totalPages, totalItems);
-        }, () -> super.listBooks(titleKeyword, tags, page, pageSize));
+            BookListPage remotePage = fetchBookPage(titleKeyword, tags, page, pageSize, sortMode);
+            return remotePage == null ? fetchCatalogPageFallback(titleKeyword, tags, page, pageSize, sortMode) : remotePage;
+        }, () -> super.listBooks(titleKeyword, tags, page, pageSize, sortMode));
     }
 
     @Override
@@ -525,9 +520,7 @@ public class RemoteBackendService extends MockBackendService {
     private List<BookCard> fetchCatalog(String titleKeyword, List<String> tags, BookSortMode sortMode) throws IOException, InterruptedException {
         boolean needTags = tags != null && !tags.isEmpty();
         String sortParam = sortParam(sortMode);
-        JsonNode page = needTags
-                ? requestPageData("/books/search-by-tags" + query(mapOf("tags", tags, "sort", sortParam, "page", 1, "size", 1000)))
-                : requestPageData("/books" + query(Map.of("page", 1, "size", 1000, "sort", sortParam)));
+        JsonNode page = fetchCatalogData(needTags, tags, sortParam);
         List<BookCard> result = new ArrayList<>();
         for (JsonNode item : pageRecords(page)) {
             BookCard card = parseBookCard(item);
@@ -554,6 +547,88 @@ public class RemoteBackendService extends MockBackendService {
                     .toList();
         }
         return applySortMode(result, sortMode);
+    }
+
+    private JsonNode fetchCatalogData(boolean needTags, List<String> tags, String sortParam) throws IOException, InterruptedException {
+        if (needTags) {
+            try {
+                return requestPageData("/books/search-by-tags" + query(mapOf("tags", tags, "sort", sortParam, "page", 1, "size", 1000)));
+            } catch (Exception ignore) {
+            }
+        }
+        return requestPageData("/books" + query(Map.of("page", 1, "size", 1000, "sort", sortParam)));
+    }
+
+    private BookListPage fetchBookPage(String titleKeyword, List<String> tags, int page, int pageSize,
+                                       BookSortMode sortMode) throws IOException, InterruptedException {
+        int safePage = Math.max(1, page);
+        int safePageSize = Math.max(1, pageSize);
+        List<String> normalizedTags = tags == null ? List.of() : tags.stream()
+                .filter(tag -> tag != null && !tag.isBlank())
+                .map(String::trim)
+                .toList();
+        Map<String, Object> params = mapOf(
+                "page", safePage,
+                "size", safePageSize,
+                "sort", sortParam(sortMode),
+                "keyword", titleKeyword,
+                "title", titleKeyword,
+                "tags", normalizedTags.isEmpty() ? null : normalizedTags
+        );
+        JsonNode pageData = requestPageData("/books" + query(params));
+        List<BookCard> items = new ArrayList<>();
+        for (JsonNode item : pageRecords(pageData)) {
+            BookCard card = parseBookCard(item);
+            if (card != null) {
+                items.add(card);
+            }
+        }
+        if (hasActiveBookFilter(titleKeyword, normalizedTags) && !bookPageMatchesFilters(items, titleKeyword, normalizedTags)) {
+            return null;
+        }
+        if (!hasPageMetadata(pageData)) {
+            return null;
+        }
+        int totalItems = pageInt(pageData, items.size(), "total", "totalItems", "totalElements", "count");
+        int totalPages = pageInt(pageData, Math.max(1, (int) Math.ceil(totalItems / (double) safePageSize)),
+                "pages", "totalPages");
+        int current = pageInt(pageData, safePage, "current", "page", "pageNumber");
+        return new BookListPage(items, Math.max(1, current), Math.max(1, totalPages), Math.max(0, totalItems));
+    }
+
+    private boolean hasActiveBookFilter(String titleKeyword, List<String> tags) {
+        return titleKeyword != null && !titleKeyword.isBlank() || tags != null && !tags.isEmpty();
+    }
+
+    private boolean bookPageMatchesFilters(List<BookCard> items, String titleKeyword, List<String> tags) {
+        return items.stream().allMatch(item ->
+                containsKeyword(item.title(), titleKeyword)
+                        && containsAllBookTags(parseStringListFromSummary(item.tagsSummary()), tags));
+    }
+
+    private boolean containsAllBookTags(List<String> sourceTags, List<String> needTags) {
+        if (needTags == null || needTags.isEmpty()) {
+            return true;
+        }
+        List<String> source = sourceTags == null ? List.of() : sourceTags.stream()
+                .map(tag -> tag.toLowerCase(Locale.ROOT))
+                .toList();
+        return needTags.stream()
+                .filter(tag -> tag != null && !tag.isBlank())
+                .map(tag -> tag.toLowerCase(Locale.ROOT))
+                .allMatch(source::contains);
+    }
+
+    private BookListPage fetchCatalogPageFallback(String titleKeyword, List<String> tags, int page, int pageSize,
+                                                  BookSortMode sortMode) throws IOException, InterruptedException {
+        List<BookCard> catalog = fetchCatalog(titleKeyword, tags, sortMode);
+        int safePage = Math.max(1, page);
+        int safePageSize = Math.max(1, pageSize);
+        int totalItems = catalog.size();
+        int totalPages = Math.max(1, (int) Math.ceil(totalItems / (double) safePageSize));
+        int from = Math.min((safePage - 1) * safePageSize, totalItems);
+        int to = Math.min(from + safePageSize, totalItems);
+        return new BookListPage(new ArrayList<>(catalog.subList(from, to)), safePage, totalPages, totalItems);
     }
 
     private List<BookCard> applySortMode(List<BookCard> cards, BookSortMode sortMode) {
@@ -942,6 +1017,16 @@ public class RemoteBackendService extends MockBackendService {
         return List.of();
     }
 
+    private boolean hasPageMetadata(JsonNode page) {
+        return firstPresent(page, "total", "totalItems", "totalElements", "count", "pages", "totalPages",
+                "current", "page", "pageNumber", "size") != null;
+    }
+
+    private int pageInt(JsonNode page, int defaultValue, String... names) {
+        JsonNode node = firstPresent(page, names);
+        return node == null ? defaultValue : Math.max(0, node.asInt(defaultValue));
+    }
+
     private JsonNode requestPageData(String path) throws IOException, InterruptedException {
         return requestJson("GET", path, null);
     }
@@ -1011,6 +1096,9 @@ public class RemoteBackendService extends MockBackendService {
         try {
             return remote.get();
         } catch (Exception ex) {
+            if (strictRemoteMode) {
+                throw remoteFailure(ex);
+            }
             return fallback.get();
         }
     }
@@ -1021,6 +1109,9 @@ public class RemoteBackendService extends MockBackendService {
         } catch (RemoteApiException ex) {
             throw ex;
         } catch (Exception ex) {
+            if (strictRemoteMode) {
+                throw remoteFailure(ex);
+            }
             return fallback.get();
         }
     }
@@ -1029,6 +1120,9 @@ public class RemoteBackendService extends MockBackendService {
         try {
             remote.run();
         } catch (Exception ex) {
+            if (strictRemoteMode) {
+                throw remoteFailure(ex);
+            }
             fallback.run();
         }
     }
@@ -1039,8 +1133,24 @@ public class RemoteBackendService extends MockBackendService {
         } catch (RemoteApiException ex) {
             throw ex;
         } catch (Exception ex) {
+            if (strictRemoteMode) {
+                throw remoteFailure(ex);
+            }
             fallback.run();
         }
+    }
+
+    private IllegalStateException remoteFailure(Exception ex) {
+        if (ex instanceof IllegalStateException illegalStateException) {
+            return illegalStateException;
+        }
+        String message = ex.getMessage();
+        return new IllegalStateException(message == null || message.isBlank() ? "远程接口请求失败" : message, ex);
+    }
+
+    private static boolean strictRemoteMode() {
+        return Boolean.getBoolean("tihu.remote.strict")
+                || "true".equalsIgnoreCase(System.getenv("TIHU_REMOTE_STRICT"));
     }
 
     @FunctionalInterface

@@ -1,14 +1,19 @@
 package com.tihu.frontend.controller;
 
 import com.tihu.frontend.service.MockBackendService;
+import com.tihu.frontend.service.MockBackendService.BookSortMode;
 import com.tihu.frontend.utils.AppContext;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class AdminBooksController implements MainContentController {
 
@@ -21,10 +26,16 @@ public class AdminBooksController implements MainContentController {
     @FXML private TextField authorField;
     @FXML private TextField tagsField;
     @FXML private TextArea introArea;
+    @FXML private TextField searchTitleField;
+    @FXML private TextField searchTagsField;
+    @FXML private ComboBox<String> sortBox;
+    @FXML private Label pageInfoLabel;
     @FXML private Label messageLabel;
 
     private final AppContext context = AppContext.getInstance();
     private Long selectedBookId;
+    private int currentPage = 1;
+    private int totalPages = 1;
 
     @FXML
     public void initialize() {
@@ -32,6 +43,13 @@ public class AdminBooksController implements MainContentController {
         authorColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().author()));
         ratingColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().averageScoreText()));
         tagsColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().tagsSummary()));
+
+        sortBox.getItems().addAll("默认排序", "按评分排序", "按书名排序");
+        sortBox.getSelectionModel().select(0);
+        sortBox.getSelectionModel().selectedIndexProperty().addListener((obs, oldValue, newValue) -> {
+            currentPage = 1;
+            refresh();
+        });
 
         tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> fillForm(newValue));
     }
@@ -46,6 +64,7 @@ public class AdminBooksController implements MainContentController {
         try {
             context.service().addBook(titleField.getText(), authorField.getText(), introArea.getText(), tagsField.getText());
             clearForm();
+            currentPage = 1;
             refresh();
         } catch (Exception ex) {
             messageLabel.setText(ex.getMessage());
@@ -79,6 +98,37 @@ public class AdminBooksController implements MainContentController {
         refresh();
     }
 
+    @FXML
+    private void onSearch() {
+        currentPage = 1;
+        refresh();
+    }
+
+    @FXML
+    private void onResetSearch() {
+        searchTitleField.clear();
+        searchTagsField.clear();
+        currentPage = 1;
+        sortBox.getSelectionModel().select(0);
+        refresh();
+    }
+
+    @FXML
+    private void onPrevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            refresh();
+        }
+    }
+
+    @FXML
+    private void onNextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            refresh();
+        }
+    }
+
     private void fillForm(MockBackendService.BookCard selected) {
         if (selected == null) {
             selectedBookId = null;
@@ -103,8 +153,28 @@ public class AdminBooksController implements MainContentController {
     }
 
     private void refresh() {
-        tableView.getItems().setAll(context.service().listBooks("", java.util.List.of(), 1, 100).items());
+        MockBackendService.BookListPage page = context.service().listBooks(searchTitleField.getText(), searchTags(), currentPage, 10, currentSortMode());
+        totalPages = page.totalPages();
+        currentPage = Math.min(Math.max(1, page.page()), totalPages);
+        tableView.getItems().setAll(page.items());
+        pageInfoLabel.setText("第 " + currentPage + "/" + totalPages + " 页，共 " + page.totalItems() + " 本");
         messageLabel.setText("管理员可增删图书；V1封面统一默认图");
+    }
+
+    private List<String> searchTags() {
+        return Arrays.stream(searchTagsField.getText() == null ? new String[0] : searchTagsField.getText().trim().split("\\s+"))
+                .map(String::trim)
+                .filter(tag -> !tag.isBlank())
+                .toList();
+    }
+
+    private BookSortMode currentSortMode() {
+        int index = sortBox.getSelectionModel().getSelectedIndex();
+        return switch (index) {
+            case 1 -> BookSortMode.RATING_DESC;
+            case 2 -> BookSortMode.TITLE_ASC;
+            default -> BookSortMode.DEFAULT;
+        };
     }
 }
 

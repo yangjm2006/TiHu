@@ -24,11 +24,14 @@ class RemoteBackendServiceApiContractTest {
     Path tempDir;
 
     private String previousStateFile;
+    private String previousStrictRemote;
 
     @BeforeEach
     void setUp() {
         previousStateFile = System.getProperty("tihu.backend.state-file");
         System.setProperty("tihu.backend.state-file", tempDir.resolve("backend-state.json").toString());
+        previousStrictRemote = System.getProperty("tihu.remote.strict");
+        System.clearProperty("tihu.remote.strict");
     }
 
     @AfterEach
@@ -37,6 +40,11 @@ class RemoteBackendServiceApiContractTest {
             System.clearProperty("tihu.backend.state-file");
         } else {
             System.setProperty("tihu.backend.state-file", previousStateFile);
+        }
+        if (previousStrictRemote == null) {
+            System.clearProperty("tihu.remote.strict");
+        } else {
+            System.setProperty("tihu.remote.strict", previousStrictRemote);
         }
     }
 
@@ -74,6 +82,49 @@ class RemoteBackendServiceApiContractTest {
         assertEquals(1, favorites.size());
         assertEquals("初始三体", favorites.getFirst().title());
         assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("GET /collections?")));
+    }
+
+    @Test
+    void shouldRequestBookCatalogWithServerSidePagingAndFilters() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        MockBackendService.BookListPage page = service.listBooks("三体", List.of("科幻", "宇宙"), 2, 10,
+                MockBackendService.BookSortMode.RATING_DESC);
+
+        assertEquals(2, page.page());
+        assertTrue(apiClient.requestLog.stream().anyMatch(line ->
+                line.startsWith("GET /books?")
+                        && line.contains("page=2")
+                        && line.contains("size=10")
+                        && line.contains("sort=rating_desc")
+                        && line.contains("keyword=%E4%B8%89%E4%BD%93")
+                        && line.contains("tags=%E7%A7%91%E5%B9%BB")
+                        && line.contains("tags=%E5%AE%87%E5%AE%99")));
+    }
+
+    @Test
+    void shouldFallbackToLocalFilteringWhenBackendIgnoresBookFilters() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        service.addBook("围城", "钱钟书", "婚姻与人生", "文学 经典");
+
+        MockBackendService.BookListPage page = service.listBooks("三体", List.of("科幻"), 1, 10);
+
+        assertEquals(1, page.items().size());
+        assertEquals("初始三体", page.items().getFirst().title());
+    }
+
+    @Test
+    void shouldNotFallbackWhenStrictRemoteModeIsEnabled() {
+        System.setProperty("tihu.remote.strict", "true");
+        RemoteBackendService service = new RemoteBackendService(new FailingApiClient());
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> service.listBooks("", List.of(), 1, 10));
+
+        assertEquals("远程服务不可用", ex.getMessage());
     }
 
     @Test
@@ -164,6 +215,17 @@ class RemoteBackendServiceApiContractTest {
         assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.startsWith("DELETE /follows?followeeId=2")));
     }
 
+    private static final class FailingApiClient extends ApiClient {
+        private FailingApiClient() {
+            super("http://test/api");
+        }
+
+        @Override
+        public String send(String method, String path, String body) {
+            throw new IllegalStateException("远程服务不可用");
+        }
+    }
+
     private static final class FakeApiClient extends ApiClient {
         private final ObjectMapper mapper = new ObjectMapper();
         private final List<String> requestLog = new ArrayList<>();
@@ -185,7 +247,7 @@ class RemoteBackendServiceApiContractTest {
                 case "POST /users/login" -> login(body);
                 case "POST /books" -> createBook(body);
                 case "DELETE /comments/999" -> envelope(403, "只能撤回自己的评论", null);
-                default -> path.startsWith("/books?") ? listBooks()
+                default -> path.startsWith("/books?") ? listBooks(path)
                         : path.startsWith("/collections?") ? listCollections()
                         : path.startsWith("/comments/book/") ? listBookComments()
                         : path.startsWith("/users/profile/") ? getUserProfile(path)
@@ -231,14 +293,16 @@ class RemoteBackendServiceApiContractTest {
             return envelope(200, "OK", Map.of("book", book.toMap()));
         }
 
-        private String listBooks() {
+        private String listBooks(String path) {
+            int current = parsePositiveInt(queryValue(path, "page"), 1);
+            int size = parsePositiveInt(queryValue(path, "size"), 10);
             List<Map<String, Object>> records = books.stream().map(BookRecord::toCardMap).toList();
             return envelope(200, "OK", Map.of(
                     "records", records,
                     "total", records.size(),
-                    "pages", 1,
-                    "current", 1,
-                    "size", 10
+                    "pages", Math.max(1, (int) Math.ceil(records.size() / (double) size)),
+                    "current", current,
+                    "size", size
             ));
         }
 
@@ -379,6 +443,15 @@ class RemoteBackendServiceApiContractTest {
                 }
             }
             return "";
+        }
+
+        private int parsePositiveInt(String value, int defaultValue) {
+            try {
+                int parsed = Integer.parseInt(value);
+                return parsed > 0 ? parsed : defaultValue;
+            } catch (Exception ex) {
+                return defaultValue;
+            }
         }
 
         private JsonNode read(String body) {

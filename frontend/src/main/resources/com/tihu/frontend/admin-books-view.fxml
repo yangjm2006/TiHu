@@ -23,14 +23,38 @@
         </VBox>
     </left>
     <center>
-        <TableView fx:id="tableView">
-            <columns>
-                <TableColumn fx:id="titleColumn" text="书名" prefWidth="220"/>
-                <TableColumn fx:id="authorColumn" text="作者" prefWidth="180"/>
-                <TableColumn fx:id="ratingColumn" text="评分" prefWidth="130"/>
-                <TableColumn fx:id="tagsColumn" text="标签摘要" prefWidth="320"/>
-            </columns>
-        </TableView>
+        <BorderPane>
+            <top>
+                <VBox spacing="8" style="-fx-padding: 12;">
+                    <HBox spacing="8">
+                        <TextField fx:id="searchTitleField" promptText="按书名搜索" prefWidth="220"/>
+                        <TextField fx:id="searchTagsField" promptText="按标签搜索，空格分隔" prefWidth="240"/>
+                        <Button text="搜索" onAction="#onSearch"/>
+                        <Button text="重置" onAction="#onResetSearch"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="排序："/>
+                        <ComboBox fx:id="sortBox" prefWidth="150"/>
+                    </HBox>
+                </VBox>
+            </top>
+            <center>
+                <TableView fx:id="tableView">
+                    <columns>
+                        <TableColumn fx:id="titleColumn" text="书名" prefWidth="220"/>
+                        <TableColumn fx:id="authorColumn" text="作者" prefWidth="180"/>
+                        <TableColumn fx:id="ratingColumn" text="评分" prefWidth="130"/>
+                        <TableColumn fx:id="tagsColumn" text="标签摘要" prefWidth="320"/>
+                    </columns>
+                </TableView>
+            </center>
+            <bottom>
+                <HBox spacing="8" style="-fx-padding: 10; -fx-alignment: center-right;">
+                    <Label fx:id="pageInfoLabel" text="第 1/1 页"/>
+                    <Button text="上一页" onAction="#onPrevPage"/>
+                    <Button text="下一页" onAction="#onNextPage"/>
+                </HBox>
+            </bottom>
+        </BorderPane>
     </center>
 </BorderPane>
 

@@ -44,10 +44,26 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
 
     @Override
     public Page<Book> getBooks(int pageNum, int pageSize, String sort) {
+        return searchBooks(null, null, pageNum, pageSize, sort);
+    }
+
+    @Override
+    public Page<Book> searchBooks(String keyword, List<String> tags, int pageNum, int pageSize, String sort) {
+        int safePageSize = pageSize <= 0 ? 10 : pageSize;
+        List<String> normalizedTags = normalizeTags(tags);
+        String normalizedKeyword = keyword == null ? null : keyword.trim();
+
+        if (!normalizedTags.isEmpty()) {
+            return searchBooksByTagsAndKeyword(normalizedKeyword, normalizedTags, pageNum, safePageSize, sort);
+        }
+
         LambdaQueryWrapper<Book> wrapper = new LambdaQueryWrapper<Book>()
                 .eq(Book::getIsDeleted, 0);
+        if (normalizedKeyword != null && !normalizedKeyword.isEmpty()) {
+            wrapper.like(Book::getTitle, normalizedKeyword);
+        }
         applySort(wrapper, sort);
-        Page<Book> page = this.page(new Page<>(pageNum, pageSize), wrapper);
+        Page<Book> page = this.page(new Page<>(pageNum, safePageSize), wrapper);
         attachTags(page.getRecords());
         return page;
     }
@@ -65,16 +81,11 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
 
     @Override
     public Page<Book> searchByTags(List<String> tags, int pageNum, int pageSize, String sort) {
-        int safePageSize = pageSize <= 0 ? 10 : pageSize;
-        List<String> normalizedTags = normalizeTags(tags);
+        return searchBooks(null, tags, pageNum, pageSize, sort);
+    }
+
+    private Page<Book> searchBooksByTagsAndKeyword(String keyword, List<String> normalizedTags, int pageNum, int safePageSize, String sort) {
         Page<Book> page = new Page<>(pageNum, safePageSize);
-        if (normalizedTags.isEmpty()) {
-            page.setRecords(Collections.emptyList());
-            page.setTotal(0);
-            page.setCurrent(pageNum);
-            page.setSize(safePageSize);
-            return page;
-        }
 
         List<Tag> tagList = tagService.list(new LambdaQueryWrapper<Tag>().in(Tag::getName, normalizedTags));
         if (tagList.size() != normalizedTags.size()) {
@@ -118,6 +129,7 @@ public class BookServiceImpl extends ServiceImpl<BookMapper, Book> implements Bo
 
         List<Book> books = this.list(new LambdaQueryWrapper<Book>()
                 .eq(Book::getIsDeleted, 0)
+                .like(keyword != null && !keyword.isEmpty(), Book::getTitle, keyword)
                 .in(Book::getId, matchedBookIds));
 
         applySort(books, sort);

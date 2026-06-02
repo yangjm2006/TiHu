@@ -1,12 +1,15 @@
 package com.tihu.backend.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tihu.backend.common.ApiException;
 import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
 import com.tihu.backend.dto.BookTagsRequest;
 import com.tihu.backend.entity.Book;
+import com.tihu.backend.entity.BookListItem;
+import com.tihu.backend.mapper.BookListItemMapper;
 import com.tihu.backend.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,9 @@ public class BookController {
     @Autowired
     private BookService bookService;
 
+    @Autowired
+    private BookListItemMapper bookListItemMapper;
+
     /**
      * 获取图书列表（分页）
      * GET /api/books?page=1&size=10&sort=default
@@ -32,8 +38,12 @@ public class BookController {
     @GetMapping
     public Result getBooks(@RequestParam(defaultValue = "1") int page,
                            @RequestParam(defaultValue = "10") int size,
-                           @RequestParam(defaultValue = "default") String sort) {
-        Page<Book> result = bookService.getBooks(page, size, sort);
+                           @RequestParam(defaultValue = "default") String sort,
+                           @RequestParam(required = false) String keyword,
+                           @RequestParam(required = false) String title,
+                           @RequestParam(required = false) List<String> tags) {
+        String finalKeyword = hasText(keyword) ? keyword : title;
+        Page<Book> result = bookService.searchBooks(finalKeyword, tags, page, size, sort);
         return Result.success(PageData.of(result));
     }
 
@@ -145,6 +155,7 @@ public class BookController {
         Book book = bookService.getById(id);
         if (book != null) {
             bookService.removeById(id);
+            bookListItemMapper.delete(new LambdaQueryWrapper<BookListItem>().eq(BookListItem::getBookId, id));
         }
         return Result.success();
     }
@@ -159,5 +170,9 @@ public class BookController {
         if (book == null || book.getTitle() == null || book.getTitle().trim().isEmpty()) {
             throw new ApiException(400, "书名不能为空");
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

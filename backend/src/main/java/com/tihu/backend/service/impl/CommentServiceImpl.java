@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tihu.backend.common.ApiException;
 import com.tihu.backend.common.Constants;
+import com.tihu.backend.entity.Book;
 import com.tihu.backend.entity.Comment;
 import com.tihu.backend.entity.User;
+import com.tihu.backend.mapper.BookMapper;
 import com.tihu.backend.mapper.CommentMapper;
 import com.tihu.backend.mapper.UserMapper;
 import com.tihu.backend.service.CommentService;
@@ -22,8 +24,15 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private BookMapper bookMapper;
+
     @Override
     public Object createComment(Long userId, Long bookId, String content, Long parentCommentId) throws Exception {
+        Book book = bookMapper.selectById(bookId);
+        if (book == null || Integer.valueOf(1).equals(book.getIsDeleted())) {
+            throw new ApiException(404, "图书不存在");
+        }
         if (content == null || content.isBlank() || content.length() > Constants.COMMENT_MAX_LENGTH) {
             throw new ApiException(400, "评论内容不能为空，最多200字");
         }

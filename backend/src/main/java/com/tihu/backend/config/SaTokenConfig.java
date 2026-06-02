@@ -21,7 +21,9 @@ public class SaTokenConfig implements WebMvcConfigurer {
             SaRouter.match("/api/**")                    // 匹配 /api/ 下的所有路由
                     .notMatch("/api/users/register")     // 放行注册接口
                     .notMatch("/api/users/login")        // 放行登录接口
+                    .notMatch("/api/tags")               // 放行标签查询接口
                     .notMatch("/api/tags/**")            // 放行标签查询接口
+                    .notMatch("/api/books")              // 放行图书列表接口
                     .notMatch("/api/books/**")          // 放行所有书籍查询接口
                     .check(r -> StpUtil.checkLogin());   // 其他路由需要登录
 
