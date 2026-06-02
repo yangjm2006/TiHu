@@ -141,6 +141,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
     private Map<String, Object> toCommentRecord(Comment comment) {
         User user = userMapper.selectById(comment.getUserId());
+        Book book = bookMapper.selectById(comment.getBookId());
         Integer likeCount = comment.getLikeCount() == null ? 0 : comment.getLikeCount();
         Integer dislikeCount = comment.getDislikeCount() == null ? 0 : comment.getDislikeCount();
 
@@ -152,6 +153,15 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         record.put("user", user != null ? user.getUsername() : null);
         record.put("nickname", user != null ? user.getUsername() : null);
         record.put("bookId", comment.getBookId());
+        record.put("bookTitle", book == null ? null : book.getTitle());
+        if (book != null) {
+            Map<String, Object> bookInfo = new HashMap<>();
+            bookInfo.put("id", book.getId());
+            bookInfo.put("bookId", book.getId());
+            bookInfo.put("title", book.getTitle());
+            bookInfo.put("bookTitle", book.getTitle());
+            record.put("bookInfo", bookInfo);
+        }
         record.put("content", comment.getContent());
         record.put("text", comment.getContent());
         record.put("createTime", comment.getCreateTime());

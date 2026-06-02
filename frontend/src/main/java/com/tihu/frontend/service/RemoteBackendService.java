@@ -504,17 +504,22 @@ public class RemoteBackendService extends MockBackendService {
 
     @Override
     public synchronized List<BookCard> listFavorites(String username) {
+        return listFavoriteItems(username).stream().map(FavoriteItem::book).toList();
+    }
+
+    @Override
+    public synchronized List<FavoriteItem> listFavoriteItems(String username) {
         return remoteOrFallback(() -> {
             JsonNode page = requestPageData("/collections" + query(Map.of("page", 1, "size", 1000)));
-            List<BookCard> result = new ArrayList<>();
+            List<FavoriteItem> result = new ArrayList<>();
             for (JsonNode item : pageRecords(page)) {
-                BookCard card = parseFavoriteCard(item, username);
-                if (card != null) {
-                    result.add(card);
+                FavoriteItem favorite = parseFavoriteItem(item, username);
+                if (favorite != null) {
+                    result.add(favorite);
                 }
             }
             return result;
-        }, () -> super.listFavorites(username));
+        }, () -> super.listFavoriteItems(username));
     }
 
     private List<BookCard> fetchCatalog(String titleKeyword, List<String> tags, BookSortMode sortMode) throws IOException, InterruptedException {
@@ -787,6 +792,16 @@ public class RemoteBackendService extends MockBackendService {
             summary = fetchRatingSummary(bookId);
         }
         return new BookCard(bookId, title, author, String.join(" ", tags), formatAvg(summary));
+    }
+
+    private FavoriteItem parseFavoriteItem(JsonNode item, String username) {
+        BookCard card = parseFavoriteCard(item, username);
+        if (card == null) {
+            return null;
+        }
+        LocalDateTime collectedAt = parseDateTime(text(firstPresent(item, "collectedAt", "collectTime",
+                "collectionTime", "createTime", "createdAt", "time")));
+        return new FavoriteItem(card, collectedAt);
     }
 
     private Book parseBook(JsonNode node, long fallbackId) {

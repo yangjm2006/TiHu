@@ -11,7 +11,7 @@
     <HBox spacing="8">
         <Button text="删除选中评论" onAction="#onDeleteSelected"/>
     </HBox>
-    <Label text="全站所有评论列表（时间倒序）："/>
+    <Label text="全站所有评论列表（图书 | 时间 | 层级 | 用户与内容）："/>
     <ListView fx:id="commentsListView" prefHeight="520"/>
     <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
 </VBox>

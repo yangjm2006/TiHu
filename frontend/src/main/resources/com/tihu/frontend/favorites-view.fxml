@@ -8,25 +8,36 @@
             fx:controller="com.tihu.frontend.controller.FavoritesController"
             prefWidth="1000" prefHeight="680">
     <top>
-        <HBox spacing="10" style="-fx-padding: 12; -fx-background-color: #f7f7f7; -fx-alignment: center-left;">
+        <VBox spacing="8" style="-fx-padding: 12; -fx-background-color: #f7f7f7;">
             <Label text="我的收藏" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Button text="查看详情" onAction="#onOpenDetail"/>
-        </HBox>
+            <HBox spacing="8" style="-fx-alignment: center-left;">
+                <TextField fx:id="searchField" promptText="按书名或标签搜索" prefWidth="260"/>
+                <Button text="搜索" onAction="#onSearch"/>
+                <Button text="重置" onAction="#onReset"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="取消收藏" onAction="#onUnfavoriteSelected"/>
+                <Button text="查看详情" onAction="#onOpenDetail"/>
+            </HBox>
+        </VBox>
     </top>
     <center>
         <TableView fx:id="favoritesTable">
             <columns>
-                <TableColumn fx:id="titleColumn" text="书名" prefWidth="220"/>
-                <TableColumn fx:id="authorColumn" text="作者" prefWidth="180"/>
-                <TableColumn fx:id="ratingColumn" text="平均评分" prefWidth="130"/>
-                <TableColumn fx:id="tagsColumn" text="标签摘要" prefWidth="320"/>
+                <TableColumn fx:id="titleColumn" text="书名" prefWidth="210"/>
+                <TableColumn fx:id="authorColumn" text="作者" prefWidth="150"/>
+                <TableColumn fx:id="ratingColumn" text="平均评分" prefWidth="110"/>
+                <TableColumn fx:id="tagsColumn" text="标签摘要" prefWidth="270"/>
+                <TableColumn fx:id="collectedAtColumn" text="收藏时间" prefWidth="180"/>
             </columns>
         </TableView>
     </center>
     <bottom>
-        <HBox style="-fx-padding: 8 12;">
+        <HBox spacing="8" style="-fx-padding: 8 12; -fx-alignment: center-right;">
             <Label fx:id="messageLabel"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="pageInfoLabel" text="第 1/1 页"/>
+            <Button text="上一页" onAction="#onPrevPage"/>
+            <Button text="下一页" onAction="#onNextPage"/>
         </HBox>
     </bottom>
 </BorderPane>

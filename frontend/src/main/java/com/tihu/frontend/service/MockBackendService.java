@@ -45,6 +45,9 @@ public class MockBackendService {
     public record BookCard(long id, String title, String author, String tagsSummary, String averageScoreText) {
     }
 
+    public record FavoriteItem(BookCard book, LocalDateTime collectedAt) {
+    }
+
     public record RatingSummary(double average, int count, Map<Integer, Integer> distribution, Integer myScore) {
     }
 
@@ -109,6 +112,7 @@ public class MockBackendService {
     private final Map<Long, List<CommentItem>> commentMap = new HashMap<>();
     private final Map<Long, Map<String, Integer>> voteMap = new HashMap<>();
     private final Map<String, Set<Long>> favoriteMap = new HashMap<>();
+    private final Map<String, Map<Long, LocalDateTime>> favoriteTimeMap = new HashMap<>();
     private final Map<String, List<UserBookList>> userBookLists = new HashMap<>();
     private final Map<String, Set<String>> followingMap = new HashMap<>();
     private final Map<String, List<MessageItem>> messageMap = new HashMap<>();
@@ -154,6 +158,7 @@ public class MockBackendService {
         ensureUserNotExists(username);
         users.put(username, new UserEntity(username, password, Role.USER));
         favoriteMap.put(username, new HashSet<>());
+        favoriteTimeMap.put(username, new HashMap<>());
         userBookLists.put(username, new ArrayList<>());
         followingMap.put(username, new HashSet<>());
         persistState();
@@ -168,6 +173,7 @@ public class MockBackendService {
         ensureUserNotExists(username);
         users.put(username, new UserEntity(username, password, Role.ADMIN));
         favoriteMap.put(username, new HashSet<>());
+        favoriteTimeMap.put(username, new HashMap<>());
         userBookLists.put(username, new ArrayList<>());
         followingMap.put(username, new HashSet<>());
         persistState();
@@ -249,11 +255,15 @@ public class MockBackendService {
     }
 
     public synchronized List<BookCard> listFavorites(String username) {
+        return listFavoriteItems(username).stream().map(FavoriteItem::book).toList();
+    }
+
+    public synchronized List<FavoriteItem> listFavoriteItems(String username) {
         getRequiredUser(username);
         return favoriteMap.getOrDefault(username, Set.of()).stream()
-                .map(this::getBook)
-                .sorted(Comparator.comparing(Book::title))
-                .map(this::toCard)
+                .map(bookId -> new FavoriteItem(toCard(getBook(bookId)), favoriteTime(username, bookId)))
+                .sorted(Comparator.comparing((FavoriteItem item) -> item.collectedAt() == null ? LocalDateTime.MIN : item.collectedAt()).reversed()
+                        .thenComparing(item -> item.book().title()))
                 .toList();
     }
 
@@ -470,6 +480,10 @@ public class MockBackendService {
                 item.upVotes(), item.downVotes(), bookId, title);
     }
 
+    private LocalDateTime favoriteTime(String username, long bookId) {
+        return favoriteTimeMap.getOrDefault(username, Map.of()).get(bookId);
+    }
+
     public synchronized void sendMessage(String from, String to, String content) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("消息不能为空");
@@ -524,7 +538,8 @@ public class MockBackendService {
     }
 
     public synchronized List<CommentItem> adminListAllComments() {
-        return commentMap.values().stream().flatMap(Collection::stream)
+        return commentMap.entrySet().stream()
+                .flatMap(entry -> entry.getValue().stream().map(item -> withBookInfo(item, entry.getKey())))
                 .sorted(Comparator.comparing(CommentItem::time).reversed())
                 .toList();
     }
@@ -574,6 +589,7 @@ public class MockBackendService {
         ratingMap.remove(bookId);
         commentMap.remove(bookId);
         favoriteMap.values().forEach(set -> set.remove((long) bookId));
+        favoriteTimeMap.values().forEach(map -> map.remove((long) bookId));
         userBookLists.values().forEach(lists -> lists.forEach(list -> list.bookIds().remove(Long.valueOf(bookId))));
         persistState();
     }
@@ -583,6 +599,7 @@ public class MockBackendService {
         ratingMap.remove(Math.toIntExact(bookId));
         commentMap.remove(Math.toIntExact(bookId));
         favoriteMap.values().forEach(set -> set.remove(bookId));
+        favoriteTimeMap.values().forEach(map -> map.remove(bookId));
         userBookLists.values().forEach(lists -> lists.forEach(list -> list.bookIds().remove(bookId)));
         persistState();
     }
@@ -689,6 +706,9 @@ public class MockBackendService {
         Set<Long> set = favoriteMap.computeIfAbsent(username, key -> new HashSet<>());
         if (!set.add(bookId)) {
             set.remove(bookId);
+            favoriteTimeMap.computeIfAbsent(username, key -> new HashMap<>()).remove(bookId);
+        } else {
+            favoriteTimeMap.computeIfAbsent(username, key -> new HashMap<>()).put(bookId, LocalDateTime.now());
         }
     }
 
@@ -855,6 +875,7 @@ public class MockBackendService {
 
     private void moveUserData(String from, String to) {
         favoriteMap.put(to, favoriteMap.remove(from));
+        favoriteTimeMap.put(to, favoriteTimeMap.remove(from));
         userBookLists.put(to, userBookLists.remove(from));
         followingMap.put(to, followingMap.remove(from));
 
@@ -937,6 +958,13 @@ public class MockBackendService {
                                 .collect(Collectors.toCollection(ArrayList::new)), (left, right) -> left, LinkedHashMap::new)),
                 voteMap,
                 favoriteMap,
+                favoriteTimeMap.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().entrySet().stream()
+                                .filter(timeEntry -> timeEntry.getValue() != null)
+                                .collect(Collectors.toMap(Map.Entry::getKey,
+                                        timeEntry -> timeEntry.getValue().toString(),
+                                        (left, right) -> left, LinkedHashMap::new)),
+                                (left, right) -> left, LinkedHashMap::new)),
                 userBookLists,
                 followingMap,
                 messageMap.entrySet().stream()
@@ -953,6 +981,7 @@ public class MockBackendService {
         commentMap.clear();
         voteMap.clear();
         favoriteMap.clear();
+        favoriteTimeMap.clear();
         userBookLists.clear();
         followingMap.clear();
         messageMap.clear();
@@ -1008,6 +1037,16 @@ public class MockBackendService {
             }
         }
 
+        if (state.favoriteTimeMap() != null) {
+            for (Map.Entry<String, Map<Long, String>> entry : state.favoriteTimeMap().entrySet()) {
+                Map<Long, LocalDateTime> times = new HashMap<>();
+                for (Map.Entry<Long, String> timeEntry : entry.getValue().entrySet()) {
+                    times.put(timeEntry.getKey(), parseDateTime(timeEntry.getValue()));
+                }
+                favoriteTimeMap.put(entry.getKey(), times);
+            }
+        }
+
         if (state.userBookLists() != null) {
             for (Map.Entry<String, List<UserBookList>> entry : state.userBookLists().entrySet()) {
                 List<UserBookList> lists = new ArrayList<>();
@@ -1037,6 +1076,7 @@ public class MockBackendService {
 
         for (String username : users.keySet()) {
             favoriteMap.putIfAbsent(username, new HashSet<>());
+            favoriteTimeMap.putIfAbsent(username, new HashMap<>());
             userBookLists.putIfAbsent(username, new ArrayList<>());
             followingMap.putIfAbsent(username, new HashSet<>());
         }
@@ -1049,7 +1089,8 @@ public class MockBackendService {
     private record PersistentState(int bookIdSeq, long commentIdSeq, long listIdSeq, List<UserSnapshot> users,
                                    List<Book> books, Map<Long, Map<String, Integer>> ratingMap,
                                    Map<Long, List<CommentSnapshot>> commentMap, Map<Long, Map<String, Integer>> voteMap,
-                                   Map<String, Set<Long>> favoriteMap, Map<String, List<UserBookList>> userBookLists,
+                                   Map<String, Set<Long>> favoriteMap, Map<String, Map<Long, String>> favoriteTimeMap,
+                                   Map<String, List<UserBookList>> userBookLists,
                                    Map<String, Set<String>> followingMap, Map<String, List<MessageSnapshot>> messageMap) {
     }
 
@@ -1071,6 +1112,9 @@ public class MockBackendService {
         favoriteMap.put("admin", new HashSet<>());
         favoriteMap.put("alice", new HashSet<>());
         favoriteMap.put("bob", new HashSet<>());
+        favoriteTimeMap.put("admin", new HashMap<>());
+        favoriteTimeMap.put("alice", new HashMap<>());
+        favoriteTimeMap.put("bob", new HashMap<>());
 
         userBookLists.put("admin", new ArrayList<>());
         userBookLists.put("alice", new ArrayList<>());

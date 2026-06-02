@@ -49,7 +49,9 @@ public class BookListServiceImpl extends ServiceImpl<BookListMapper, BookList> i
         this.save(bookList);
 
         Map<String, Object> data = new HashMap<>();
-        data.put("bookList", toBookListRecord(bookList));
+        Map<String, Object> record = toBookListRecord(bookList);
+        data.put("bookList", record);
+        data.put("list", record);
         return data;
     }
 

@@ -73,6 +73,11 @@ public class CollectionServiceImpl extends ServiceImpl<CollectionMapper, Collect
             dto.setOwner(username);
             dto.setUsername(username);
             dto.setCreateTime(collection.getCreateTime());
+            dto.setCollectedAt(collection.getCreateTime());
+            dto.setCollectTime(collection.getCreateTime());
+            dto.setCollectionTime(collection.getCreateTime());
+            dto.setCreatedAt(collection.getCreateTime());
+            dto.setTime(collection.getCreateTime());
 
             if (bookDetail instanceof java.util.Map<?, ?> detailMap) {
                 Object bookInfo = detailMap.get("bookInfo");

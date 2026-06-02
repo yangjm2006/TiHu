@@ -58,6 +58,7 @@ public class UserController {
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("userInfo", loggedIn);
         data.put("token", token);
+        data.put("role", loggedIn.getRole());
         return Result.success(data);
     }
 
