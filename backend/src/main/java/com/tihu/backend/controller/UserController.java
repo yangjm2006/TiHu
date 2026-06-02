@@ -103,6 +103,7 @@ public class UserController {
      */
     @PutMapping("/{id}/password")
     public Result updatePassword(@PathVariable Long id, @RequestParam String oldPassword, @RequestParam String newPassword) throws Exception {
+        checkSelfOrAdmin(id);
         userService.updatePassword(id, oldPassword, newPassword);
         return Result.success();
     }
@@ -113,6 +114,7 @@ public class UserController {
      */
     @PutMapping("/{id}/username")
     public Result updateUsername(@PathVariable Long id, @RequestParam String newUsername) throws Exception {
+        checkSelfOrAdmin(id);
         userService.updateUsername(id, newUsername);
         return Result.success();
     }
@@ -212,6 +214,7 @@ public class UserController {
      */
     @PostMapping("/admin/{id}/ban")
     public Result banUser(@PathVariable Long id, @RequestParam Long durationSeconds) {
+        StpUtil.checkRole("ADMIN");
         userService.banUser(id, durationSeconds);
         return Result.success();
     }
@@ -222,12 +225,20 @@ public class UserController {
      */
     @DeleteMapping("/admin/{id}/ban")
     public Result unbanUser(@PathVariable Long id) {
+        StpUtil.checkRole("ADMIN");
         userService.unbanUser(id);
         return Result.success();
     }
 
     private String resolveField(String bodyValue, String requestParamValue) {
         return bodyValue != null && !bodyValue.isBlank() ? bodyValue : requestParamValue;
+    }
+
+    private void checkSelfOrAdmin(Long targetUserId) {
+        Long currentUserId = Long.parseLong(StpUtil.getLoginId().toString());
+        if (!currentUserId.equals(targetUserId)) {
+            StpUtil.checkRole("ADMIN");
+        }
     }
 
     private String textValue(Map<String, Object> body, String... names) {
