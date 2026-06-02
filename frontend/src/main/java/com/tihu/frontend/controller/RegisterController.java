@@ -2,9 +2,9 @@ package com.tihu.frontend.controller;
 
 import com.tihu.frontend.MainApplication;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.AppTheme;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -24,15 +24,15 @@ public class RegisterController {
             String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
             String password = passwordField.getText() == null ? "" : passwordField.getText().trim();
             if (username.isBlank() || password.isBlank()) {
-                messageLabel.setStyle("-fx-text-fill: red;");
+                setMessageStyle("error-text");
                 messageLabel.setText("用户名和密码不能为空");
                 return;
             }
             context.service().registerUser(username, password);
-            messageLabel.setStyle("-fx-text-fill: green;");
+            setMessageStyle("success-text");
             messageLabel.setText("注册成功，请返回登录");
         } catch (Exception ex) {
-            messageLabel.setStyle("-fx-text-fill: red;");
+            setMessageStyle("error-text");
             messageLabel.setText(ex.getMessage());
         }
     }
@@ -46,10 +46,15 @@ public class RegisterController {
         try {
             FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource(fxml));
             Stage stage = (Stage) usernameField.getScene().getWindow();
-            stage.setScene(new Scene(loader.load(), width, height));
+            stage.setScene(AppTheme.scene(loader.load(), width, height));
         } catch (Exception ex) {
             messageLabel.setText("跳转失败：" + ex.getMessage());
         }
+    }
+
+    private void setMessageStyle(String styleClass) {
+        messageLabel.getStyleClass().removeAll("error-text", "success-text");
+        messageLabel.getStyleClass().add(styleClass);
     }
 }
 

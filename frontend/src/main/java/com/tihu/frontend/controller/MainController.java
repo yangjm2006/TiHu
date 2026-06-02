@@ -1,6 +1,7 @@
 package com.tihu.frontend.controller;
 
 import com.tihu.frontend.MainApplication;
+import com.tihu.frontend.utils.AppTheme;
 import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppContext.BookListDetailReturnTarget;
 import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
@@ -146,7 +147,7 @@ public class MainController {
             context.logout();
             FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
             Stage stage = (Stage) contentPane.getScene().getWindow();
-            stage.setScene(new Scene(loader.load(), 520, 380));
+            stage.setScene(AppTheme.scene(loader.load(), 520, 380));
         } catch (Exception ex) {
             setContent(new Label("登出失败：" + ex.getMessage()));
         }
@@ -167,13 +168,13 @@ public class MainController {
 
     private void showPlaceholder(String title, String message) {
         Label titleLabel = new Label(title);
-        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        titleLabel.getStyleClass().add("section-title");
         Label messageLabel = new Label(message);
         messageLabel.setWrapText(true);
-        messageLabel.setStyle("-fx-text-fill: #555;");
+        messageLabel.getStyleClass().add("helper-text");
 
         javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(12, titleLabel, messageLabel);
-        box.setStyle("-fx-padding: 24;");
+        box.getStyleClass().add("card");
         setContent(box);
     }
 }

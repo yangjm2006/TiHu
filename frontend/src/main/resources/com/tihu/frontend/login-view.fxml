@@ -5,24 +5,25 @@
 
 <AnchorPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.LoginController"
+            styleClass="page"
             prefWidth="520" prefHeight="380">
-    <VBox spacing="12" alignment="CENTER" AnchorPane.leftAnchor="24" AnchorPane.rightAnchor="24"
+    <VBox spacing="16" alignment="CENTER" styleClass="auth-card" AnchorPane.leftAnchor="50" AnchorPane.rightAnchor="50"
           AnchorPane.topAnchor="20" AnchorPane.bottomAnchor="20">
-        <Label text="TiHu 登录" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
-        <GridPane hgap="10" vgap="10">
-            <Label text="用户名：" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <Label text="TiHu 登录" styleClass="page-title"/>
+        <GridPane styleClass="form-grid">
+            <Label text="用户名：" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
             <TextField fx:id="usernameField" promptText="请输入用户名" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-            <Label text="密码：" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <Label text="密码：" styleClass="form-label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
             <PasswordField fx:id="passwordField" promptText="请输入密码" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
         </GridPane>
 
         <HBox spacing="10" alignment="CENTER">
-            <Button text="登录" onAction="#onLogin"/>
-            <Button text="注册普通用户" onAction="#onOpenUserRegister"/>
-            <Button text="注册管理员" onAction="#onOpenAdminRegister"/>
+            <Button text="登录" onAction="#onLogin" styleClass="button-primary"/>
+            <Button text="注册普通用户" onAction="#onOpenUserRegister" styleClass="button-secondary"/>
+            <Button text="注册管理员" onAction="#onOpenAdminRegister" styleClass="button-secondary"/>
         </HBox>
 
-        <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
+        <Label fx:id="messageLabel" styleClass="error-text" wrapText="true"/>
     </VBox>
 </AnchorPane>

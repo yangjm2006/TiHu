@@ -5,26 +5,27 @@
 
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.BookListsController"
+            styleClass="card"
             prefWidth="1000" prefHeight="680">
     <left>
-        <VBox spacing="8" style="-fx-padding: 12;" prefWidth="320">
-            <Label text="我的书单" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+        <VBox spacing="12" style="-fx-padding: 0 16 0 0;" prefWidth="330">
+            <Label text="我的书单" styleClass="section-title"/>
             <ListView fx:id="listView" prefHeight="500"/>
             <HBox spacing="8">
-                <Button text="打开" onAction="#onOpen"/>
-                <Button text="切换公开/私密" onAction="#onToggleVisibility"/>
-                <Button text="删除" onAction="#onDelete"/>
+                <Button text="打开" onAction="#onOpen" styleClass="button-primary"/>
+                <Button text="切换公开/私密" onAction="#onToggleVisibility" styleClass="button-secondary"/>
+                <Button text="删除" onAction="#onDelete" styleClass="button-danger"/>
             </HBox>
         </VBox>
     </left>
     <center>
-        <VBox spacing="10" style="-fx-padding: 12;">
-            <Label text="创建书单" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+        <VBox spacing="12" styleClass="card">
+            <Label text="创建书单" styleClass="section-title"/>
             <TextField fx:id="titleField" promptText="标题"/>
             <TextArea fx:id="introArea" promptText="简介" prefRowCount="5" wrapText="true"/>
             <CheckBox fx:id="publicCheckBox" text="公开书单" selected="true"/>
-            <Button text="创建" onAction="#onCreate"/>
-            <Label fx:id="messageLabel" wrapText="true"/>
+            <Button text="创建" onAction="#onCreate" styleClass="button-primary"/>
+            <Label fx:id="messageLabel" wrapText="true" styleClass="status-text"/>
         </VBox>
     </center>
 </BorderPane>

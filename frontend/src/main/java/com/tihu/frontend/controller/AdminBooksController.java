@@ -33,6 +33,7 @@ public class AdminBooksController implements MainContentController {
     @FXML private Label messageLabel;
 
     private final AppContext context = AppContext.getInstance();
+    private static final int PAGE_SIZE = 6;
     private Long selectedBookId;
     private int currentPage = 1;
     private int totalPages = 1;
@@ -153,7 +154,7 @@ public class AdminBooksController implements MainContentController {
     }
 
     private void refresh() {
-        MockBackendService.BookListPage page = context.service().listBooks(searchTitleField.getText(), searchTags(), currentPage, 10, currentSortMode());
+        MockBackendService.BookListPage page = context.service().listBooks(searchTitleField.getText(), searchTags(), currentPage, PAGE_SIZE, currentSortMode());
         totalPages = page.totalPages();
         currentPage = Math.min(Math.max(1, page.page()), totalPages);
         tableView.getItems().setAll(page.items());

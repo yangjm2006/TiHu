@@ -5,24 +5,25 @@
 
 <AnchorPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.RegisterController"
+            styleClass="page"
             prefWidth="500" prefHeight="360">
     <children>
-        <VBox spacing="12" alignment="CENTER" AnchorPane.leftAnchor="24" AnchorPane.rightAnchor="24"
+        <VBox spacing="16" alignment="CENTER" styleClass="auth-card" AnchorPane.leftAnchor="46" AnchorPane.rightAnchor="46"
               AnchorPane.topAnchor="20" AnchorPane.bottomAnchor="20">
-            <Label text="注册普通用户" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
-            <GridPane hgap="10" vgap="10">
-                <Label text="用户名：" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <Label text="注册普通用户" styleClass="page-title"/>
+            <GridPane styleClass="form-grid">
+                <Label text="用户名：" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
                 <TextField fx:id="usernameField" promptText="2~10 字符" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-                <Label text="密码：" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <Label text="密码：" styleClass="form-label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                 <PasswordField fx:id="passwordField" promptText="6~12，含数字和字母" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
             </GridPane>
 
             <HBox spacing="10" alignment="CENTER">
-                <Button text="提交注册" onAction="#onSubmit"/>
-                <Button text="返回登录" onAction="#onBack"/>
+                <Button text="提交注册" onAction="#onSubmit" styleClass="button-primary"/>
+                <Button text="返回登录" onAction="#onBack" styleClass="button-secondary"/>
             </HBox>
-            <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
+            <Label fx:id="messageLabel" styleClass="error-text" wrapText="true"/>
         </VBox>
     </children>
 </AnchorPane>

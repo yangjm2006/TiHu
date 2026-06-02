@@ -85,7 +85,7 @@ class RemoteBackendServiceApiContractTest {
     }
 
     @Test
-    void shouldRequestBookCatalogWithServerSidePagingAndFilters() {
+    void shouldUseClientSideGlobalCatalogWhenSortingBooks() {
         FakeApiClient apiClient = new FakeApiClient();
         RemoteBackendService service = new RemoteBackendService(apiClient);
 
@@ -94,11 +94,10 @@ class RemoteBackendServiceApiContractTest {
 
         assertEquals(2, page.page());
         assertTrue(apiClient.requestLog.stream().anyMatch(line ->
-                line.startsWith("GET /books?")
-                        && line.contains("page=2")
-                        && line.contains("size=10")
+                line.startsWith("GET /books/search-by-tags?")
+                        && line.contains("page=1")
+                        && line.contains("size=1000")
                         && line.contains("sort=rating_desc")
-                        && line.contains("keyword=%E4%B8%89%E4%BD%93")
                         && line.contains("tags=%E7%A7%91%E5%B9%BB")
                         && line.contains("tags=%E5%AE%87%E5%AE%99")));
     }

@@ -144,6 +144,9 @@ public class RemoteBackendService extends MockBackendService {
 
     public synchronized BookListPage listBooks(String titleKeyword, List<String> tags, int page, int pageSize, BookSortMode sortMode) {
         return remoteOrFallback(() -> {
+            if (hasActiveBookSort(sortMode)) {
+                return fetchCatalogPageFallback(titleKeyword, tags, page, pageSize, sortMode);
+            }
             BookListPage remotePage = fetchBookPage(titleKeyword, tags, page, pageSize, sortMode);
             return remotePage == null ? fetchCatalogPageFallback(titleKeyword, tags, page, pageSize, sortMode) : remotePage;
         }, () -> super.listBooks(titleKeyword, tags, page, pageSize, sortMode));

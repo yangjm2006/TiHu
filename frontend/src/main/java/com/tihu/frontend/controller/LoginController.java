@@ -3,6 +3,7 @@ package com.tihu.frontend.controller;
 import com.tihu.frontend.MainApplication;
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.AppTheme;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -41,7 +42,7 @@ public class LoginController {
             context.login(user.trim(), role);
             try {
                 FXMLLoader fxmlLoader = new FXMLLoader(MainApplication.class.getResource("main-view.fxml"));
-                Scene scene = new Scene(fxmlLoader.load(), 1220, 760);
+                Scene scene = AppTheme.scene(fxmlLoader.load(), 1220, 760);
                 Stage stage = (Stage) usernameField.getScene().getWindow();
                 stage.setScene(scene);
             } catch (Exception ex) {
@@ -76,7 +77,7 @@ public class LoginController {
         try {
             FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource(fxml));
             Stage stage = (Stage) usernameField.getScene().getWindow();
-            stage.setScene(new Scene(loader.load(), width, height));
+            stage.setScene(AppTheme.scene(loader.load(), width, height));
         } catch (Exception ex) {
             messageLabel.setText("页面跳转失败：" + ex.getMessage());
         }

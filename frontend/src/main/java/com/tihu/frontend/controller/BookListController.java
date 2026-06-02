@@ -28,6 +28,7 @@ public class BookListController implements MainContentController {
 
     private final AppContext context = AppContext.getInstance();
     private MainController mainController;
+    private static final int PAGE_SIZE = 7;
     private int currentPage = 1;
     private int totalPages = 1;
     private boolean restoringState;
@@ -49,6 +50,7 @@ public class BookListController implements MainContentController {
                 : context.bookListSortMode() == BookSortMode.RATING_DESC ? 1 : 2);
         sortBox.getSelectionModel().selectedIndexProperty().addListener((obs, oldValue, newValue) -> {
             if (!restoringState) {
+                currentPage = 1;
                 refresh();
             }
         });
@@ -123,7 +125,7 @@ public class BookListController implements MainContentController {
                 .map(String::trim)
                 .filter(tag -> !tag.isBlank())
                 .toList();
-        MockBackendService.BookListPage page = context.service().listBooks(titleSearchField.getText(), tags, currentPage, 10, currentSortMode());
+        MockBackendService.BookListPage page = context.service().listBooks(titleSearchField.getText(), tags, currentPage, PAGE_SIZE, currentSortMode());
         totalPages = page.totalPages();
         currentPage = Math.min(Math.max(1, page.page()), totalPages);
         bookTableView.getItems().setAll(page.items());

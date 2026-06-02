@@ -5,14 +5,14 @@
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.tihu.frontend.controller.AdminCommentsController"
-      spacing="10"
-      style="-fx-padding: 16;">
-    <Label text="评论管理（逻辑删除）" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+      spacing="12"
+      styleClass="card">
+    <Label text="评论管理（逻辑删除）" styleClass="section-title"/>
     <HBox spacing="8">
-        <Button text="删除选中评论" onAction="#onDeleteSelected"/>
+        <Button text="删除选中评论" onAction="#onDeleteSelected" styleClass="button-danger"/>
     </HBox>
-    <Label text="全站所有评论列表（图书 | 时间 | 层级 | 用户与内容）："/>
+    <Label text="全站所有评论列表（图书 | 时间 | 层级 | 用户与内容）：" styleClass="helper-text"/>
     <ListView fx:id="commentsListView" prefHeight="520"/>
-    <Label fx:id="messageLabel" textFill="red" wrapText="true"/>
+    <Label fx:id="messageLabel" styleClass="error-text" wrapText="true"/>
 </VBox>
 
