@@ -80,6 +80,7 @@ public class BookController {
     @PostMapping
     @Transactional(rollbackFor = Exception.class)
     public Result createBook(@RequestBody Book book) {
+        StpUtil.checkRole("ADMIN");
         requireTitle(book);
         normalizeTitle(book);
         if (bookService.lambdaQuery().eq(Book::getTitle, book.getTitle()).count() > 0) {
@@ -100,6 +101,7 @@ public class BookController {
     @PutMapping("/{id}")
     @Transactional(rollbackFor = Exception.class)
     public Result updateBook(@PathVariable Long id, @RequestBody Book book) {
+        StpUtil.checkRole("ADMIN");
         book.setId(id);
         requireTitle(book);
         normalizeTitle(book);
@@ -139,6 +141,7 @@ public class BookController {
      */
     @DeleteMapping("/{id}")
     public Result deleteBook(@PathVariable Long id) {
+        StpUtil.checkRole("ADMIN");
         Book book = bookService.getById(id);
         if (book != null) {
             bookService.removeById(id);

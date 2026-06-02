@@ -4,10 +4,14 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tihu.backend.common.ApiException;
+import com.tihu.backend.entity.Book;
 import com.tihu.backend.entity.Rating;
+import com.tihu.backend.mapper.BookMapper;
 import com.tihu.backend.mapper.RatingMapper;
 import com.tihu.backend.service.RatingService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,8 +20,16 @@ import java.util.Map;
 @Service
 public class RatingServiceImpl extends ServiceImpl<RatingMapper, Rating> implements RatingService {
 
+    @Autowired
+    private BookMapper bookMapper;
+
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Rating submitRating(Long userId, Long bookId, Integer score) throws Exception {
+        Book book = bookMapper.selectById(bookId);
+        if (book == null || Integer.valueOf(1).equals(book.getIsDeleted())) {
+            throw new ApiException(404, "图书不存在");
+        }
         if (score < 1 || score > 10) {
             throw new ApiException(400, "评分必须在1-10之间");
         }
@@ -26,6 +38,7 @@ public class RatingServiceImpl extends ServiceImpl<RatingMapper, Rating> impleme
         if (existing != null) {
             existing.setScore(score);
             this.updateById(existing);
+            syncBookRatingStats(bookId);
             return existing;
         }
         
@@ -34,6 +47,7 @@ public class RatingServiceImpl extends ServiceImpl<RatingMapper, Rating> impleme
         rating.setBookId(bookId);
         rating.setScore(score);
         this.save(rating);
+        syncBookRatingStats(bookId);
         return rating;
     }
 
@@ -67,6 +81,23 @@ public class RatingServiceImpl extends ServiceImpl<RatingMapper, Rating> impleme
             stats.put("myScore", null);
         }
         return stats;
+    }
+
+    private void syncBookRatingStats(Long bookId) {
+        List<Integer> scores = this.list(new LambdaQueryWrapper<Rating>().eq(Rating::getBookId, bookId))
+            .stream()
+            .map(Rating::getScore)
+            .toList();
+
+        Book book = bookMapper.selectById(bookId);
+        if (book == null || Integer.valueOf(1).equals(book.getIsDeleted())) {
+            return;
+        }
+
+        double avgRating = scores.isEmpty() ? 0 : scores.stream().mapToInt(Integer::intValue).average().orElse(0);
+        book.setAvgRating(avgRating);
+        book.setRatingCount(scores.size());
+        bookMapper.updateById(book);
     }
 }
 
