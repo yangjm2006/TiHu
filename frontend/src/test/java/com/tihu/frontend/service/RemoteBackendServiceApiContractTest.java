@@ -117,6 +117,19 @@ class RemoteBackendServiceApiContractTest {
     }
 
     @Test
+    void shouldFallbackToLocalSortingWhenBackendIgnoresBookSort() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        service.addBook("AAA", "Author", "Intro", "测试");
+
+        MockBackendService.BookListPage page = service.listBooks("", List.of(), 1, 10,
+                MockBackendService.BookSortMode.TITLE_ASC);
+
+        assertEquals("AAA", page.items().getFirst().title());
+    }
+
+    @Test
     void shouldNotFallbackWhenStrictRemoteModeIsEnabled() {
         System.setProperty("tihu.remote.strict", "true");
         RemoteBackendService service = new RemoteBackendService(new FailingApiClient());

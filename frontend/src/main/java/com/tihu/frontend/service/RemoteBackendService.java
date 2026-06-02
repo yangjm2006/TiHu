@@ -591,6 +591,9 @@ public class RemoteBackendService extends MockBackendService {
         if (hasActiveBookFilter(titleKeyword, normalizedTags) && !bookPageMatchesFilters(items, titleKeyword, normalizedTags)) {
             return null;
         }
+        if (hasActiveBookSort(sortMode) && !bookPageMatchesSort(items, sortMode)) {
+            return null;
+        }
         if (!hasPageMetadata(pageData)) {
             return null;
         }
@@ -605,10 +608,44 @@ public class RemoteBackendService extends MockBackendService {
         return titleKeyword != null && !titleKeyword.isBlank() || tags != null && !tags.isEmpty();
     }
 
+    private boolean hasActiveBookSort(BookSortMode sortMode) {
+        return sortMode != null && sortMode != BookSortMode.DEFAULT;
+    }
+
     private boolean bookPageMatchesFilters(List<BookCard> items, String titleKeyword, List<String> tags) {
         return items.stream().allMatch(item ->
                 containsKeyword(item.title(), titleKeyword)
                         && containsAllBookTags(parseStringListFromSummary(item.tagsSummary()), tags));
+    }
+
+    private boolean bookPageMatchesSort(List<BookCard> items, BookSortMode sortMode) {
+        if (items == null || items.size() <= 1 || !hasActiveBookSort(sortMode)) {
+            return true;
+        }
+        for (int i = 1; i < items.size(); i++) {
+            if (compareBookCards(items.get(i - 1), items.get(i), sortMode) > 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private int compareBookCards(BookCard left, BookCard right, BookSortMode sortMode) {
+        return switch (sortMode) {
+            case RATING_DESC -> {
+                int cmp = compareRatingTextDesc(left.averageScoreText(), right.averageScoreText());
+                if (cmp != 0) {
+                    yield cmp;
+                }
+                cmp = left.title().compareToIgnoreCase(right.title());
+                yield cmp != 0 ? cmp : Long.compare(left.id(), right.id());
+            }
+            case TITLE_ASC -> {
+                int cmp = left.title().compareToIgnoreCase(right.title());
+                yield cmp != 0 ? cmp : Long.compare(left.id(), right.id());
+            }
+            case DEFAULT -> 0;
+        };
     }
 
     private boolean containsAllBookTags(List<String> sourceTags, List<String> needTags) {
