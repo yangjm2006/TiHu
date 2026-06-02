@@ -42,7 +42,7 @@ public class LoginController {
             context.login(user.trim(), role);
             try {
                 FXMLLoader fxmlLoader = new FXMLLoader(MainApplication.class.getResource("main-view.fxml"));
-                Scene scene = AppTheme.scene(fxmlLoader.load(), 1220, 760);
+                Scene scene = AppTheme.scene(fxmlLoader.load(), 1380, 860);
                 Stage stage = (Stage) usernameField.getScene().getWindow();
                 stage.setScene(scene);
             } catch (Exception ex) {
@@ -65,12 +65,12 @@ public class LoginController {
 
     @FXML
     private void onOpenUserRegister() {
-        switchScene("register-view.fxml", 500, 360);
+        switchScene("register-view.fxml", 580, 420);
     }
 
     @FXML
     private void onOpenAdminRegister() {
-        switchScene("admin-register-view.fxml", 500, 400);
+        switchScene("admin-register-view.fxml", 580, 460);
     }
 
     private void switchScene(String fxml, int width, int height) {

@@ -39,7 +39,7 @@ public class RegisterController {
 
     @FXML
     private void onBack() {
-        switchScene("login-view.fxml", 520, 380);
+        switchScene("login-view.fxml", 600, 440);
     }
 
     private void switchScene(String fxml, int width, int height) {

@@ -9,9 +9,9 @@
             styleClass="card"
             prefWidth="1000" prefHeight="680">
     <top>
-        <VBox spacing="10" styleClass="toolbar-card">
+        <VBox spacing="12" styleClass="toolbar-card">
             <Label text="图书列表" styleClass="section-title"/>
-            <HBox spacing="10">
+            <HBox spacing="12" style="-fx-alignment: center-left;">
                 <TextField fx:id="titleSearchField" promptText="按书名模糊搜索" prefWidth="220"/>
                 <TextField fx:id="tagsSearchField" promptText="按标签 AND 搜索，例如：科幻 宇宙" prefWidth="280"/>
                 <Button text="搜索" onAction="#onSearch" styleClass="button-primary"/>
@@ -35,7 +35,7 @@
     </center>
 
     <bottom>
-        <HBox spacing="8" style="-fx-padding: 14 4 0 4; -fx-alignment: center-right;">
+        <HBox spacing="10" style="-fx-padding: 16 4 0 4; -fx-alignment: center-right;">
             <Label fx:id="pageInfoLabel" text="第 1/1 页" styleClass="status-text"/>
             <Button text="上一页" onAction="#onPrevPage" styleClass="button-secondary"/>
             <Button text="下一页" onAction="#onNextPage" styleClass="button-secondary"/>

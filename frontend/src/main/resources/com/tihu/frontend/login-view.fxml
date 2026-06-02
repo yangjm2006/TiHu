@@ -6,7 +6,7 @@
 <AnchorPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.LoginController"
             styleClass="page"
-            prefWidth="520" prefHeight="380">
+            prefWidth="600" prefHeight="440">
     <VBox spacing="16" alignment="CENTER" styleClass="auth-card" AnchorPane.leftAnchor="50" AnchorPane.rightAnchor="50"
           AnchorPane.topAnchor="20" AnchorPane.bottomAnchor="20">
         <Label text="TiHu 登录" styleClass="page-title"/>

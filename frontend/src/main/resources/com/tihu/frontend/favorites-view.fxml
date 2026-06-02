@@ -9,9 +9,9 @@
             styleClass="card"
             prefWidth="1000" prefHeight="680">
     <top>
-        <VBox spacing="10" styleClass="toolbar-card">
+        <VBox spacing="12" styleClass="toolbar-card">
             <Label text="我的收藏" styleClass="section-title"/>
-            <HBox spacing="10" style="-fx-alignment: center-left;">
+            <HBox spacing="12" style="-fx-alignment: center-left;">
                 <TextField fx:id="searchField" promptText="按书名或标签搜索" prefWidth="260"/>
                 <Button text="搜索" onAction="#onSearch" styleClass="button-primary"/>
                 <Button text="重置" onAction="#onReset" styleClass="button-secondary"/>
@@ -33,7 +33,7 @@
         </TableView>
     </center>
     <bottom>
-        <HBox spacing="8" style="-fx-padding: 14 4 0 4; -fx-alignment: center-right;">
+        <HBox spacing="10" style="-fx-padding: 16 4 0 4; -fx-alignment: center-right;">
             <Label fx:id="messageLabel" styleClass="status-text"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label fx:id="pageInfoLabel" text="第 1/1 页" styleClass="status-text"/>

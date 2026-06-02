@@ -147,7 +147,7 @@ public class MainController {
             context.logout();
             FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
             Stage stage = (Stage) contentPane.getScene().getWindow();
-            stage.setScene(AppTheme.scene(loader.load(), 520, 380));
+            stage.setScene(AppTheme.scene(loader.load(), 600, 440));
         } catch (Exception ex) {
             setContent(new Label("登出失败：" + ex.getMessage()));
         }

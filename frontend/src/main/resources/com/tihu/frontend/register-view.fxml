@@ -6,7 +6,7 @@
 <AnchorPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.RegisterController"
             styleClass="page"
-            prefWidth="500" prefHeight="360">
+            prefWidth="580" prefHeight="420">
     <children>
         <VBox spacing="16" alignment="CENTER" styleClass="auth-card" AnchorPane.leftAnchor="46" AnchorPane.rightAnchor="46"
               AnchorPane.topAnchor="20" AnchorPane.bottomAnchor="20">

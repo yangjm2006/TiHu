@@ -6,7 +6,7 @@
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.MainController"
             styleClass="app-root"
-            prefWidth="1220" prefHeight="760">
+            prefWidth="1380" prefHeight="860">
 
     <top>
         <HBox styleClass="topbar">

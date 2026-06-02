@@ -13,7 +13,7 @@ public class MainApplication extends Application {
     public void start(Stage stage) throws Exception {
         AppContext.getInstance().setPrimaryStage(stage);
         FXMLLoader fxmlLoader = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
-        Scene scene = AppTheme.scene(fxmlLoader.load(), 520, 380);
+        Scene scene = AppTheme.scene(fxmlLoader.load(), 600, 440);
         stage.setTitle("TiHu");
         stage.setScene(scene);
         stage.show();
