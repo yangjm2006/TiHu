@@ -36,7 +36,10 @@ public class MockBackendService {
         ADMIN
     }
 
-    public record Book(long id, String title, String author, String intro, List<String> tags) {
+    public record Book(long id, String title, String author, String intro, List<String> tags, String coverImage) {
+        public Book(long id, String title, String author, String intro, List<String> tags) {
+            this(id, title, author, intro, tags, null);
+        }
     }
 
     public record BookListPage(List<BookCard> items, int page, int totalPages, int totalItems) {
@@ -72,7 +75,11 @@ public class MockBackendService {
     }
 
     public record UserProfile(String username, List<CommentItem> comments, List<UserBookList> bookLists, int followingCount,
-                              int followerCount, boolean followedByCurrentUser) {
+                              int followerCount, boolean followedByCurrentUser, String avatarImage) {
+        public UserProfile(String username, List<CommentItem> comments, List<UserBookList> bookLists, int followingCount,
+                           int followerCount, boolean followedByCurrentUser) {
+            this(username, comments, bookLists, followingCount, followerCount, followedByCurrentUser, null);
+        }
     }
 
     public record FollowItem(String username) {
@@ -92,6 +99,7 @@ public class MockBackendService {
         private String password;
         private Role role;
         private LocalDateTime bannedUntil;
+        private String avatarImage;
 
         private UserEntity(String username, String password, Role role) {
             this.username = username;
@@ -180,6 +188,10 @@ public class MockBackendService {
     }
 
     public synchronized void updateProfile(String currentUsername, String newUsername, String newPassword) {
+        updateProfile(currentUsername, newUsername, newPassword, null);
+    }
+
+    public synchronized void updateProfile(String currentUsername, String newUsername, String newPassword, String avatarImage) {
         UserEntity user = getRequiredUser(currentUsername);
         if (newUsername != null && !newUsername.isBlank() && !currentUsername.equals(newUsername)) {
             validateUsername(newUsername);
@@ -192,6 +204,9 @@ public class MockBackendService {
         if (newPassword != null && !newPassword.isBlank()) {
             validatePassword(newPassword);
             user.password = newPassword;
+        }
+        if (avatarImage != null) {
+            user.avatarImage = valueOrNull(avatarImage);
         }
         persistState();
     }
@@ -278,12 +293,20 @@ public class MockBackendService {
     }
 
     public synchronized void updateBook(long bookId, String title, String author, String intro, String tagsText) {
-        updateBookInternal(bookId, title, author, intro, tagsText);
+        updateBook(bookId, title, author, intro, tagsText, null);
+    }
+
+    public synchronized void updateBook(long bookId, String title, String author, String intro, String tagsText, String coverImage) {
+        updateBookInternal(bookId, title, author, intro, tagsText, coverImage);
         persistState();
     }
 
     public synchronized void updateBook(int bookId, String title, String author, String intro, String tagsText) {
         updateBook((long) bookId, title, author, intro, tagsText);
+    }
+
+    public synchronized void updateBook(int bookId, String title, String author, String intro, String tagsText, String coverImage) {
+        updateBook((long) bookId, title, author, intro, tagsText, coverImage);
     }
 
     public synchronized void deleteOwnComment(long bookId, long commentId, String username) {
@@ -470,7 +493,8 @@ public class MockBackendService {
         int followingCount = listFollowing(target).size();
         int followerCount = listFollowers(target).size();
         boolean followed = followingMap.getOrDefault(currentUser, Set.of()).contains(target);
-        return new UserProfile(target, comments, lists, followingCount, followerCount, followed);
+        return new UserProfile(target, comments, lists, followingCount, followerCount, followed,
+                getRequiredUser(target).avatarImage);
     }
 
     private CommentItem withBookInfo(CommentItem item, long bookId) {
@@ -545,6 +569,10 @@ public class MockBackendService {
     }
 
     public synchronized Book addBook(String title, String author, String intro, String tagsText) {
+        return addBook(title, author, intro, tagsText, null);
+    }
+
+    public synchronized Book addBook(String title, String author, String intro, String tagsText, String coverImage) {
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("书名必填");
         }
@@ -552,7 +580,7 @@ public class MockBackendService {
             throw new IllegalStateException("书名已存在");
         }
         Book book = new Book(bookIdSeq.incrementAndGet(), title.trim(), valueOrEmpty(author), valueOrEmpty(intro),
-                parseTags(tagsText));
+                parseTags(tagsText), valueOrNull(coverImage));
         books.put(book.id(), book);
         persistState();
         return book;
@@ -730,8 +758,8 @@ public class MockBackendService {
         return item;
     }
 
-    private void updateBookInternal(long bookId, String title, String author, String intro, String tagsText) {
-        getBookInternal(bookId);
+    private void updateBookInternal(long bookId, String title, String author, String intro, String tagsText, String coverImage) {
+        Book existing = getBookInternal(bookId);
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("书名必填");
         }
@@ -741,7 +769,8 @@ public class MockBackendService {
         if (duplicated) {
             throw new IllegalStateException("书名已存在");
         }
-        books.put(bookId, new Book(bookId, normalizedTitle, valueOrEmpty(author), valueOrEmpty(intro), parseTags(tagsText)));
+        String cover = coverImage == null ? existing.coverImage() : valueOrNull(coverImage);
+        books.put(bookId, new Book(bookId, normalizedTitle, valueOrEmpty(author), valueOrEmpty(intro), parseTags(tagsText), cover));
     }
 
     private void deleteOwnCommentInternal(long bookId, long commentId, String username) {
@@ -869,6 +898,11 @@ public class MockBackendService {
         return value == null ? "" : value.trim();
     }
 
+    private String valueOrNull(String value) {
+        String normalized = valueOrEmpty(value);
+        return normalized.isBlank() ? null : normalized;
+    }
+
     private String formatBanLoginMessage(LocalDateTime bannedUntil) {
         return "您已被封禁，解封时间是 " + bannedUntil;
     }
@@ -947,7 +981,8 @@ public class MockBackendService {
                 listIdSeq.get(),
                 users.values().stream()
                         .map(user -> new UserSnapshot(user.username, user.password, user.role,
-                                user.bannedUntil == null ? null : user.bannedUntil.toString()))
+                                user.bannedUntil == null ? null : user.bannedUntil.toString(),
+                                user.avatarImage))
                         .toList(),
                 new ArrayList<>(books.values()),
                 ratingMap,
@@ -998,13 +1033,14 @@ public class MockBackendService {
             for (UserSnapshot user : state.users()) {
                 UserEntity entity = new UserEntity(user.username(), user.password(), user.role());
                 entity.bannedUntil = parseDateTime(user.bannedUntil());
+                entity.avatarImage = user.avatarImage();
                 users.put(user.username(), entity);
             }
         }
 
         if (state.books() != null) {
             for (Book book : state.books()) {
-                books.put(book.id(), new Book(book.id(), book.title(), book.author(), book.intro(), new ArrayList<>(book.tags())));
+                books.put(book.id(), new Book(book.id(), book.title(), book.author(), book.intro(), new ArrayList<>(book.tags()), book.coverImage()));
             }
         }
 
@@ -1094,7 +1130,7 @@ public class MockBackendService {
                                    Map<String, Set<String>> followingMap, Map<String, List<MessageSnapshot>> messageMap) {
     }
 
-    private record UserSnapshot(String username, String password, Role role, String bannedUntil) {
+    private record UserSnapshot(String username, String password, Role role, String bannedUntil, String avatarImage) {
     }
 
     private record CommentSnapshot(long id, String user, String content, String time, Long parentId, int upVotes,

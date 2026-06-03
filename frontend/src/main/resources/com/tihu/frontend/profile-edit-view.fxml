@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.tihu.frontend.controller.ProfileEditController"
@@ -15,6 +16,13 @@
         <TextField fx:id="usernameField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
         <Label text="新密码：" styleClass="form-label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
         <PasswordField fx:id="passwordField" promptText="不改可留空" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+        <Label text="头像：" styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <HBox spacing="10" style="-fx-alignment: center-left;" GridPane.rowIndex="2" GridPane.columnIndex="1">
+            <ImageView fx:id="avatarPreview" fitWidth="72" fitHeight="72" preserveRatio="true"/>
+            <Button text="上传头像" onAction="#onUploadAvatar" styleClass="button-secondary"/>
+            <Button text="清空头像" onAction="#onClearAvatar" styleClass="button-secondary"/>
+            <Label fx:id="avatarStatusLabel" text="当前无头像" styleClass="helper-text"/>
+        </HBox>
     </GridPane>
     <Button text="保存修改" onAction="#onSave" styleClass="button-primary"/>
     <Label fx:id="messageLabel" wrapText="true" styleClass="status-text"/>

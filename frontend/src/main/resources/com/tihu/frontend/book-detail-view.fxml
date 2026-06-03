@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
 <BorderPane xmlns="http://javafx.com/javafx"
@@ -24,6 +25,7 @@
     <center>
         <SplitPane dividerPositions="0.52">
             <VBox spacing="12" style="-fx-padding: 14 14 14 0;">
+                <ImageView fx:id="coverImageView" fitWidth="160" fitHeight="220" preserveRatio="true"/>
                 <Label text="简介" styleClass="section-title"/>
                 <TextArea fx:id="descArea"
                           editable="false"

@@ -4,6 +4,7 @@ import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.service.MockBackendService.BookSortMode;
 import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
+import com.tihu.frontend.utils.ImageDataUtil;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
 import javafx.scene.control.ComboBox;
@@ -12,7 +13,11 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.stage.FileChooser;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
@@ -30,6 +35,8 @@ public class AdminBooksController implements MainContentController {
     @FXML private TextField searchTitleField;
     @FXML private TextField searchTagsField;
     @FXML private ComboBox<String> sortBox;
+    @FXML private ImageView coverPreview;
+    @FXML private Label coverStatusLabel;
     @FXML private Label pageInfoLabel;
     @FXML private Label messageLabel;
 
@@ -37,6 +44,7 @@ public class AdminBooksController implements MainContentController {
     private static final int PAGE_SIZE = 6;
     private MainController mainController;
     private Long selectedBookId;
+    private String selectedCoverImage;
     private int currentPage = 1;
     private int totalPages = 1;
 
@@ -75,7 +83,8 @@ public class AdminBooksController implements MainContentController {
     @FXML
     private void onAddBook() {
         try {
-            context.service().addBook(titleField.getText(), authorField.getText(), introArea.getText(), tagsField.getText());
+            context.service().addBook(titleField.getText(), authorField.getText(), introArea.getText(), tagsField.getText(),
+                    selectedCoverImage);
             clearForm();
             currentPage = 1;
             refresh();
@@ -91,7 +100,8 @@ public class AdminBooksController implements MainContentController {
             return;
         }
         try {
-            context.service().updateBook(selectedBookId, titleField.getText(), authorField.getText(), introArea.getText(), tagsField.getText());
+            context.service().updateBook(selectedBookId, titleField.getText(), authorField.getText(), introArea.getText(),
+                    tagsField.getText(), selectedCoverImage);
             refresh();
             messageLabel.setText("图书已更新");
         } catch (Exception ex) {
@@ -150,6 +160,31 @@ public class AdminBooksController implements MainContentController {
         }
     }
 
+    @FXML
+    private void onUploadCover() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("选择图书封面");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("图片文件", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp"));
+        File file = chooser.showOpenDialog(coverPreview == null ? null : coverPreview.getScene().getWindow());
+        if (file == null) {
+            return;
+        }
+        try {
+            selectedCoverImage = ImageDataUtil.toDataUri(file);
+            updateCoverPreview();
+            messageLabel.setText("封面已选择，保存图书后生效");
+        } catch (Exception ex) {
+            messageLabel.setText("读取封面失败：" + ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onClearCover() {
+        selectedCoverImage = "";
+        updateCoverPreview();
+        messageLabel.setText("封面已清空，保存图书后生效");
+    }
+
     private void fillForm(MockBackendService.BookCard selected) {
         if (selected == null) {
             selectedBookId = null;
@@ -161,6 +196,8 @@ public class AdminBooksController implements MainContentController {
         authorField.setText(book.author());
         introArea.setText(book.intro());
         tagsField.setText(String.join(" ", book.tags()));
+        selectedCoverImage = book.coverImage();
+        updateCoverPreview();
         messageLabel.setText("已载入选中图书，标签请用空格分隔后直接修改再更新");
     }
 
@@ -171,6 +208,8 @@ public class AdminBooksController implements MainContentController {
         authorField.clear();
         tagsField.clear();
         introArea.clear();
+        selectedCoverImage = null;
+        updateCoverPreview();
     }
 
     private void refresh() {
@@ -179,7 +218,18 @@ public class AdminBooksController implements MainContentController {
         currentPage = Math.min(Math.max(1, page.page()), totalPages);
         tableView.getItems().setAll(page.items());
         pageInfoLabel.setText("第 " + currentPage + "/" + totalPages + " 页，共 " + page.totalItems() + " 本");
-        messageLabel.setText("管理员可增删图书；V1封面统一默认图");
+        messageLabel.setText("管理员可增删图书，也可上传或修改封面");
+    }
+
+    private void updateCoverPreview() {
+        if (coverPreview == null) {
+            return;
+        }
+        Image image = ImageDataUtil.image(selectedCoverImage);
+        coverPreview.setImage(image);
+        if (coverStatusLabel != null) {
+            coverStatusLabel.setText(image == null ? "当前无封面" : "已选择封面");
+        }
     }
 
     private List<String> searchTags() {

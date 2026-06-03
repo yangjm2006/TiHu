@@ -3,10 +3,13 @@ package com.tihu.frontend.controller;
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppContext.BookListDetailReturnTarget;
+import com.tihu.frontend.utils.ImageDataUtil;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 
 public class UserProfileController implements MainContentController {
@@ -14,6 +17,7 @@ public class UserProfileController implements MainContentController {
     @FXML private TextField usernameField;
     @FXML private Label userLabel;
     @FXML private Label relationLabel;
+    @FXML private ImageView avatarImageView;
     @FXML private ListView<String> commentsListView;
     @FXML private ListView<String> bookListsView;
     @FXML private Label messageLabel;
@@ -122,6 +126,7 @@ public class UserProfileController implements MainContentController {
             viewedUsername = profile.username();
             context.setViewedProfileUsername(viewedUsername);
             usernameField.setText(viewedUsername);
+            updateAvatar(profile.avatarImage());
             userLabel.setText("用户：" + profile.username());
             currentFollowed = profile.followedByCurrentUser();
             followToggleButton.setText(currentFollowed ? "取消关注" : "关注");
@@ -142,8 +147,19 @@ public class UserProfileController implements MainContentController {
             profileBookLists = java.util.List.of();
             commentsListView.getItems().clear();
             bookListsView.getItems().clear();
+            updateAvatar(null);
             messageLabel.setText(ex.getMessage());
         }
+    }
+
+    private void updateAvatar(String avatarImage) {
+        if (avatarImageView == null) {
+            return;
+        }
+        Image image = ImageDataUtil.image(avatarImage);
+        avatarImageView.setImage(image);
+        avatarImageView.setVisible(image != null);
+        avatarImageView.setManaged(image != null);
     }
 
     private String normalizedViewedUsername() {

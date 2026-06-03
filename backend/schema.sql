@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `user` (
     `status` INT DEFAULT 0 COMMENT '0=正常，1=封禁',
     `ban_expire_time` DATETIME COMMENT '封禁过期时间',
     `bio` VARCHAR(500) COMMENT '用户简介',
-    `avatar` VARCHAR(500) COMMENT '头像URL',
+    `avatar` LONGTEXT COMMENT '头像URL或data URI',
     `name` VARCHAR(50) COMMENT '旧字段',
     `age` INT COMMENT '旧字段',
     `email` VARCHAR(100) COMMENT '旧字段',
@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS `user` (
     KEY `idx_username` (`username`),
     KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+
+ALTER TABLE `user` MODIFY COLUMN `avatar` LONGTEXT COMMENT '头像URL或data URI';
 
 -- 创建角色表
 CREATE TABLE IF NOT EXISTS `role` (
@@ -46,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `book` (
     `author` VARCHAR(100),
     `isbn` VARCHAR(50),
     `description` TEXT,
-    `cover` VARCHAR(500),
+    `cover` LONGTEXT,
     `publish_date` DATETIME,
     `avg_rating` DECIMAL(3, 1) DEFAULT 0,
     `rating_count` INT DEFAULT 0,
@@ -56,6 +58,8 @@ CREATE TABLE IF NOT EXISTS `book` (
     KEY `idx_title` (`title`),
     KEY `idx_avg_rating` (`avg_rating`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE `book` MODIFY COLUMN `cover` LONGTEXT;
 
 -- 创建标签表
 CREATE TABLE IF NOT EXISTS `tag` (

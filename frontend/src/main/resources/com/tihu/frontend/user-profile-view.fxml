@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.tihu.frontend.controller.UserProfileController"
@@ -16,8 +17,13 @@
                 <Button text="查看粉丝" onAction="#onOpenFollowers" styleClass="button-secondary"/>
                 <Button text="打开书单" onAction="#onOpenBookList" styleClass="button-secondary"/>
             </HBox>
-            <Label fx:id="userLabel" styleClass="helper-text"/>
-            <Label fx:id="relationLabel" styleClass="helper-text"/>
+            <HBox spacing="10" style="-fx-alignment: center-left;">
+                <ImageView fx:id="avatarImageView" fitWidth="64" fitHeight="64" preserveRatio="true"/>
+                <VBox spacing="4">
+                    <Label fx:id="userLabel" styleClass="helper-text"/>
+                    <Label fx:id="relationLabel" styleClass="helper-text"/>
+                </VBox>
+            </HBox>
         </VBox>
     </top>
     <center>

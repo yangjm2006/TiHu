@@ -94,7 +94,8 @@ public class UserController {
         String currentUsername = textValue(body, "currentUsername", "username");
         String newUsername = textValue(body, "newUsername");
         String newPassword = textValue(body, "newPassword");
-        User user = userService.updateProfile(userId, currentUsername, newUsername, newPassword);
+        String avatar = textValue(body, "avatarImage", "avatar", "avatarUrl", "profileImage", "profileImageUrl");
+        User user = userService.updateProfile(userId, currentUsername, newUsername, newPassword, avatar);
         return Result.success(user);
     }
 

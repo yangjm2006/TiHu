@@ -3,6 +3,7 @@ package com.tihu.frontend.controller;
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
+import com.tihu.frontend.utils.ImageDataUtil;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -11,6 +12,8 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextArea;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Polygon;
@@ -27,6 +30,7 @@ public class BookDetailController implements MainContentController {
     @FXML private Button favoriteButton;
     @FXML private Label titleLabel;
     @FXML private Label metaLabel;
+    @FXML private ImageView coverImageView;
     @FXML private TextArea descArea;
     @FXML private Label ratingSummaryLabel;
     @FXML private HBox ratingStarsBox;
@@ -224,6 +228,7 @@ public class BookDetailController implements MainContentController {
         MockBackendService.BookDetail detail = context.service().getBookDetail(bookId, context.username());
         titleLabel.setText(detail.book().title());
         metaLabel.setText("作者：" + detail.book().author() + "  |  标签：" + String.join(" ", detail.book().tags()));
+        updateCover(detail.book().coverImage());
         descArea.setText(detail.book().intro());
 
         MockBackendService.RatingSummary summary = detail.ratingSummary();
@@ -347,6 +352,16 @@ public class BookDetailController implements MainContentController {
         if (!myBookLists.isEmpty()) {
             bookListComboBox.getSelectionModel().select(Math.min(Math.max(selectedIndex, 0), myBookLists.size() - 1));
         }
+    }
+
+    private void updateCover(String coverImage) {
+        if (coverImageView == null) {
+            return;
+        }
+        Image image = ImageDataUtil.image(coverImage);
+        coverImageView.setImage(image);
+        coverImageView.setVisible(image != null);
+        coverImageView.setManaged(image != null);
     }
 
     private String commentContent() {

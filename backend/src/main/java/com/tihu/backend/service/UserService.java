@@ -35,7 +35,7 @@ public interface UserService extends IService<User> {
     /**
      * 修改当前用户资料
      */
-    User updateProfile(Long userId, String currentUsername, String newUsername, String newPassword) throws Exception;
+    User updateProfile(Long userId, String currentUsername, String newUsername, String newPassword, String avatar) throws Exception;
 
     /**
      * 封禁用户

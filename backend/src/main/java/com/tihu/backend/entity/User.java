@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -37,7 +38,8 @@ public class User {
     // 用户简介
     private String bio;
     
-    // 头像URL（V1使用默认头像）
+    // 头像，可存 URL 或 data:image/...;base64,...
+    @JsonAlias({"avatarImage", "avatarUrl", "profileImage", "profileImageUrl"})
     private String avatar;
     
     // 旧字段（保留向后兼容）
@@ -56,4 +58,24 @@ public class User {
     @TableField(value = "update_time", fill = FieldFill.UPDATE)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updateTime;
+
+    @JsonProperty("avatarImage")
+    public String getAvatarImage() {
+        return avatar;
+    }
+
+    @JsonProperty("avatarUrl")
+    public String getAvatarUrl() {
+        return avatar;
+    }
+
+    @JsonProperty("profileImage")
+    public String getProfileImage() {
+        return avatar;
+    }
+
+    @JsonProperty("profileImageUrl")
+    public String getProfileImageUrl() {
+        return avatar;
+    }
 }

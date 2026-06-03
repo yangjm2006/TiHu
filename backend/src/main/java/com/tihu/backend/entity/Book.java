@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -31,7 +32,8 @@ public class Book {
     // 简介
     private String description;
     
-    // 封面URL（V1统一使用默认封面）
+    // 封面，可存 URL 或 data:image/...;base64,...
+    @JsonAlias({"coverImage", "coverUrl", "image", "imageUrl"})
     private String cover;
     
     // 出版日期
@@ -59,5 +61,25 @@ public class Book {
     @TableField(value = "update_time", fill = FieldFill.UPDATE)
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updateTime;
+
+    @JsonProperty("coverImage")
+    public String getCoverImage() {
+        return cover;
+    }
+
+    @JsonProperty("coverUrl")
+    public String getCoverUrl() {
+        return cover;
+    }
+
+    @JsonProperty("image")
+    public String getImage() {
+        return cover;
+    }
+
+    @JsonProperty("imageUrl")
+    public String getImageUrl() {
+        return cover;
+    }
 }
 

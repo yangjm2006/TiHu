@@ -202,7 +202,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public User updateProfile(Long userId, String currentUsername, String newUsername, String newPassword) throws Exception {
+    public User updateProfile(Long userId, String currentUsername, String newUsername, String newPassword, String avatar) throws Exception {
         User user = this.getById(userId);
         if (user == null) {
             throw new ApiException(404, "用户不存在");
@@ -229,6 +229,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 throw new ApiException(400, "密码必须为6-12位，包含数字和英文字符");
             }
             user.setPassword(BCrypt.hashpw(finalPassword));
+        }
+
+        if (avatar != null) {
+            user.setAvatar(avatar.trim());
         }
 
         this.updateById(user);

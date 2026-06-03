@@ -60,8 +60,13 @@ public class RemoteBackendService extends MockBackendService {
 
     @Override
     public synchronized void updateProfile(String currentUsername, String newUsername, String newPassword) {
-        runRemoteOrFallback(() -> remoteUpdateProfile(currentUsername, newUsername, newPassword),
-                () -> super.updateProfile(currentUsername, newUsername, newPassword));
+        updateProfile(currentUsername, newUsername, newPassword, null);
+    }
+
+    @Override
+    public synchronized void updateProfile(String currentUsername, String newUsername, String newPassword, String avatarImage) {
+        runRemoteOrFallback(() -> remoteUpdateProfile(currentUsername, newUsername, newPassword, avatarImage),
+                () -> super.updateProfile(currentUsername, newUsername, newPassword, avatarImage));
     }
 
     @Override
@@ -96,7 +101,7 @@ public class RemoteBackendService extends MockBackendService {
             if (tags.isEmpty()) {
                 tags = fetchBookTags(bookId);
                 if (!tags.isEmpty()) {
-                    book = new Book(book.id(), book.title(), book.author(), book.intro(), tags);
+                    book = new Book(book.id(), book.title(), book.author(), book.intro(), tags, book.coverImage());
                 }
             }
             RatingSummary summary = parseRatingSummary(firstPresent(data, "ratings", "ratingSummary", "data"), bookId);
@@ -182,16 +187,23 @@ public class RemoteBackendService extends MockBackendService {
 
     @Override
     public synchronized void updateBook(long bookId, String title, String author, String intro, String tagsText) {
+        updateBook(bookId, title, author, intro, tagsText, null);
+    }
+
+    @Override
+    public synchronized void updateBook(long bookId, String title, String author, String intro, String tagsText, String coverImage) {
         runRemoteOrFallback(() -> {
             List<String> tags = parseTagInput(tagsText);
             requestData("PUT", "/books/" + bookId, json(mapOf(
                     "title", title,
                     "author", author,
                     "description", intro,
-                    "cover", "",
+                    "cover", coverImage,
+                    "coverImage", coverImage,
+                    "coverUrl", coverImage,
                     "tags", tags
             )));
-        }, () -> super.updateBook(bookId, title, author, intro, tagsText));
+        }, () -> super.updateBook(bookId, title, author, intro, tagsText, coverImage));
     }
 
     @Override
@@ -200,22 +212,34 @@ public class RemoteBackendService extends MockBackendService {
     }
 
     @Override
+    public synchronized void updateBook(int bookId, String title, String author, String intro, String tagsText, String coverImage) {
+        updateBook((long) bookId, title, author, intro, tagsText, coverImage);
+    }
+
+    @Override
     public synchronized Book addBook(String title, String author, String intro, String tagsText) {
+        return addBook(title, author, intro, tagsText, null);
+    }
+
+    @Override
+    public synchronized Book addBook(String title, String author, String intro, String tagsText, String coverImage) {
         return remoteOrFallback(() -> {
             List<String> tags = parseTagInput(tagsText);
             JsonNode data = requestData("POST", "/books", json(mapOf(
                     "title", title,
                     "author", author,
                     "description", intro,
-                    "cover", "",
+                    "cover", coverImage,
+                    "coverImage", coverImage,
+                    "coverUrl", coverImage,
                     "tags", tags
             )));
             Book book = parseBook(firstPresent(data, "book", "data", "bookInfo"), -1L);
             if (book != null) {
                 return book;
             }
-            return super.addBook(title, author, intro, tagsText);
-        }, () -> super.addBook(title, author, intro, tagsText));
+            return super.addBook(title, author, intro, tagsText, coverImage);
+        }, () -> super.addBook(title, author, intro, tagsText, coverImage));
     }
 
     @Override
@@ -868,7 +892,14 @@ public class RemoteBackendService extends MockBackendService {
         if (tags.isEmpty() && id > 0) {
             tags = fetchBookTags(id);
         }
-        return new Book(id, title, author, intro, tags);
+        String coverImage = safe(text(firstPresent(node, "coverImage", "cover", "coverUrl", "image", "imageUrl")));
+        if (coverImage.isBlank()) {
+            JsonNode bookInfo = firstPresent(node, "bookInfo", "book");
+            if (bookInfo != null && bookInfo != node) {
+                coverImage = safe(text(firstPresent(bookInfo, "coverImage", "cover", "coverUrl", "image", "imageUrl")));
+            }
+        }
+        return new Book(id, title, author, intro, tags, coverImage.isBlank() ? null : coverImage);
     }
 
     private List<String> fetchBookTags(long bookId) {
@@ -1124,17 +1155,23 @@ public class RemoteBackendService extends MockBackendService {
         return role;
     }
 
-    private void remoteUpdateProfile(String currentUsername, String newUsername, String newPassword) throws IOException, InterruptedException {
+    private void remoteUpdateProfile(String currentUsername, String newUsername, String newPassword, String avatarImage) throws IOException, InterruptedException {
         JsonNode payload = requestData("PUT", "/users/profile", json(mapOf(
                 "currentUsername", currentUsername,
                 "newUsername", newUsername,
-                "newPassword", newPassword
+                "newPassword", newPassword,
+                "avatarImage", avatarImage,
+                "avatar", avatarImage,
+                "avatarUrl", avatarImage
         )));
         if (payload == null) {
             requestData("PUT", "/users/me", json(mapOf(
                     "username", currentUsername,
                     "newUsername", newUsername,
-                    "newPassword", newPassword
+                    "newPassword", newPassword,
+                    "avatarImage", avatarImage,
+                    "avatar", avatarImage,
+                    "avatarUrl", avatarImage
             )));
         }
     }
@@ -1507,7 +1544,9 @@ public class RemoteBackendService extends MockBackendService {
         if (followedNode != null) {
             followed = followedNode.isBoolean() ? followedNode.asBoolean() : Boolean.parseBoolean(followedNode.asText());
         }
-        return new UserProfile(username, comments, lists, followingCount, followerCount, followed);
+        String avatarImage = safe(text(firstPresent(userInfo, "avatarImage", "avatar", "avatarUrl", "profileImage", "profileImageUrl")));
+        return new UserProfile(username, comments, lists, followingCount, followerCount, followed,
+                avatarImage.isBlank() ? null : avatarImage);
     }
 
     private boolean containsKeyword(String text, String keyword) {

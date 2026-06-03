@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
 <BorderPane xmlns="http://javafx.com/javafx"
@@ -24,6 +25,14 @@
 
                     <Label text="简介" styleClass="form-label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                     <TextArea fx:id="introArea" promptText="简介" prefRowCount="2" wrapText="true" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.columnSpan="5"/>
+
+                    <Label text="封面" styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                    <HBox spacing="10" style="-fx-alignment: center-left;" GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.columnSpan="5">
+                        <ImageView fx:id="coverPreview" fitWidth="72" fitHeight="96" preserveRatio="true"/>
+                        <Button text="上传封面" onAction="#onUploadCover" styleClass="button-secondary"/>
+                        <Button text="清空封面" onAction="#onClearCover" styleClass="button-secondary"/>
+                        <Label fx:id="coverStatusLabel" text="当前无封面" styleClass="helper-text"/>
+                    </HBox>
                 </GridPane>
                 <HBox spacing="8" style="-fx-alignment: center-left;">
                     <Button text="新增图书" onAction="#onAddBook" styleClass="button-primary"/>
