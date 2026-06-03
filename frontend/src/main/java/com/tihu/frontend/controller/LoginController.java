@@ -97,8 +97,6 @@ public class LoginController {
     }
 
     private void updateThemeToggleText() {
-        if (themeToggleButton != null) {
-            themeToggleButton.setText(AppTheme.toggleButtonText());
-        }
+        AppTheme.configureToggleButton(themeToggleButton);
     }
 }

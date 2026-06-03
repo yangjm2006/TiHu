@@ -3,10 +3,13 @@ package com.tihu.frontend.utils;
 import com.tihu.frontend.MainApplication;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 
 public final class AppTheme {
     private static final String THEME_PATH = "app-theme.css";
     private static final String DARK_THEME_CLASS = "theme-dark";
+    private static final String TO_DAY_CLASS = "theme-toggle-day";
+    private static final String TO_NIGHT_CLASS = "theme-toggle-night";
     private static boolean darkMode;
 
     private AppTheme() {
@@ -44,6 +47,15 @@ public final class AppTheme {
 
     public static String toggleButtonText() {
         return darkMode ? "日间模式" : "夜间模式";
+    }
+
+    public static void configureToggleButton(Button button) {
+        if (button == null) {
+            return;
+        }
+        button.setText(toggleButtonText());
+        button.getStyleClass().removeAll(TO_DAY_CLASS, TO_NIGHT_CLASS);
+        button.getStyleClass().add(darkMode ? TO_DAY_CLASS : TO_NIGHT_CLASS);
     }
 
     private static void applyMode(Scene scene) {

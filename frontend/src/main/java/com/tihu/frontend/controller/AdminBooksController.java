@@ -3,6 +3,7 @@ package com.tihu.frontend.controller;
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.service.MockBackendService.BookSortMode;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
 import javafx.scene.control.ComboBox;
@@ -34,9 +35,15 @@ public class AdminBooksController implements MainContentController {
 
     private final AppContext context = AppContext.getInstance();
     private static final int PAGE_SIZE = 6;
+    private MainController mainController;
     private Long selectedBookId;
     private int currentPage = 1;
     private int totalPages = 1;
+
+    @Override
+    public void setMainController(MainController mainController) {
+        this.mainController = mainController;
+    }
 
     @FXML
     public void initialize() {
@@ -53,6 +60,11 @@ public class AdminBooksController implements MainContentController {
         });
 
         tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> fillForm(newValue));
+        tableView.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                onOpenDetail();
+            }
+        });
     }
 
     @Override
@@ -127,6 +139,14 @@ public class AdminBooksController implements MainContentController {
         if (currentPage < totalPages) {
             currentPage++;
             refresh();
+        }
+    }
+
+    @FXML
+    private void onOpenDetail() {
+        MockBackendService.BookCard selected = tableView.getSelectionModel().getSelectedItem();
+        if (selected != null && mainController != null) {
+            mainController.openBookDetail(selected.id(), BookDetailReturnTarget.ADMIN_BOOKS);
         }
     }
 

@@ -140,7 +140,7 @@ public class MainController {
     @FXML public void onFollowing() { openFollowList(context.username(), false); }
     @FXML public void onFollowers() { openFollowList(context.username(), true); }
     @FXML public void onConversations() { loadContent("conversations-view.fxml"); }
-    @FXML private void onAdminBooks() { loadContent("admin-books-view.fxml"); }
+    @FXML public void onAdminBooks() { loadContent("admin-books-view.fxml"); }
     @FXML private void onAdminUsers() { loadContent("admin-users-view.fxml"); }
     @FXML private void onAdminComments() { loadContent("admin-comments-view.fxml"); }
 
@@ -172,9 +172,7 @@ public class MainController {
     }
 
     private void updateThemeToggleText() {
-        if (themeToggleButton != null) {
-            themeToggleButton.setText(AppTheme.toggleButtonText());
-        }
+        AppTheme.configureToggleButton(themeToggleButton);
     }
 
     private void showPlaceholder(String title) {

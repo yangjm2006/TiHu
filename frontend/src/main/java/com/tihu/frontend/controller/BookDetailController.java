@@ -193,6 +193,8 @@ public class BookDetailController implements MainContentController {
         if (mainController != null) {
             if (context.bookDetailReturnTarget() == BookDetailReturnTarget.FAVORITES) {
                 mainController.onFavorites();
+            } else if (context.bookDetailReturnTarget() == BookDetailReturnTarget.ADMIN_BOOKS) {
+                mainController.onAdminBooks();
             } else if (context.bookDetailReturnTarget() == BookDetailReturnTarget.BOOK_LIST_DETAIL
                     && context.selectedBookListId() != null) {
                 String owner = context.selectedBookListOwner() == null ? context.username() : context.selectedBookListOwner();
@@ -257,6 +259,8 @@ public class BookDetailController implements MainContentController {
         if (backButton != null) {
             if (context.bookDetailReturnTarget() == BookDetailReturnTarget.FAVORITES) {
                 backButton.setText("← 返回收藏");
+            } else if (context.bookDetailReturnTarget() == BookDetailReturnTarget.ADMIN_BOOKS) {
+                backButton.setText("← 返回图书管理");
             } else if (context.bookDetailReturnTarget() == BookDetailReturnTarget.BOOK_LIST_DETAIL) {
                 backButton.setText("← 返回书单");
             } else {

@@ -9,7 +9,8 @@ public final class AppContext {
     public enum BookDetailReturnTarget {
         BOOK_LIST,
         FAVORITES,
-        BOOK_LIST_DETAIL
+        BOOK_LIST_DETAIL,
+        ADMIN_BOOKS
     }
 
     public enum BookListDetailReturnTarget {

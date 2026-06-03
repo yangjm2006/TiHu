@@ -217,6 +217,30 @@
     -fx-background-color: -fx-danger-hover;
 }
 
+.theme-toggle-night {
+    -fx-background-color: linear-gradient(to bottom, #26363B, #17262A);
+    -fx-border-color: #3E555B;
+    -fx-text-fill: #E8F2F0;
+    -fx-effect: dropshadow(gaussian, rgba(31, 45, 51, 0.26), 14, 0.18, 0, 4);
+}
+
+.theme-toggle-night:hover {
+    -fx-background-color: linear-gradient(to bottom, #30464C, #1C3035);
+    -fx-border-color: #5C838A;
+}
+
+.theme-toggle-day {
+    -fx-background-color: linear-gradient(to bottom, #FFFFFF, #C2EDE1);
+    -fx-border-color: #8BDDC8;
+    -fx-text-fill: #1F5F53;
+    -fx-effect: dropshadow(gaussian, rgba(106, 210, 180, 0.34), 16, 0.20, 0, 5);
+}
+
+.theme-toggle-day:hover {
+    -fx-background-color: linear-gradient(to bottom, #FFFFFF, #D7F6EE);
+    -fx-border-color: #6AD2B4;
+}
+
 .nav-item {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
@@ -228,8 +252,13 @@
 }
 
 .nav-item:hover {
-    -fx-background-color: #D7EAF2;
-    -fx-text-fill: #2D7795;
+    -fx-background-color: #D9F3EC;
+    -fx-text-fill: #2F7D6C;
+}
+
+.nav-item:pressed {
+    -fx-background-color: #C2EDE1;
+    -fx-text-fill: #286E60;
 }
 
 .nav-section {
@@ -543,13 +572,36 @@
     -fx-background-color: #E06F6F;
 }
 
+.theme-dark .theme-toggle-day {
+    -fx-background-color: linear-gradient(to bottom, #FFFFFF, #C2EDE1);
+    -fx-border-color: #91E6D0;
+    -fx-text-fill: #153E38;
+    -fx-effect: dropshadow(gaussian, rgba(194, 237, 225, 0.34), 16, 0.20, 0, 5);
+}
+
+.theme-dark .theme-toggle-day:hover {
+    -fx-background-color: linear-gradient(to bottom, #FFFFFF, #D7F6EE);
+    -fx-border-color: #6AD2B4;
+}
+
+.theme-dark .theme-toggle-night {
+    -fx-background-color: linear-gradient(to bottom, #26363B, #17262A);
+    -fx-border-color: #3E555B;
+    -fx-text-fill: #E8F2F0;
+}
+
 .theme-dark .nav-item {
     -fx-text-fill: #B6C9C5;
 }
 
 .theme-dark .nav-item:hover {
-    -fx-background-color: #1E4655;
-    -fx-text-fill: #BEEBFA;
+    -fx-background-color: #1F4B43;
+    -fx-text-fill: #C8F4E8;
+}
+
+.theme-dark .nav-item:pressed {
+    -fx-background-color: #285E53;
+    -fx-text-fill: #D9FFF5;
 }
 
 .theme-dark .nav-section {
