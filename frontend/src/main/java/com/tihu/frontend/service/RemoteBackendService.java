@@ -4,17 +4,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tihu.frontend.request.ApiClient;
+import com.tihu.frontend.utils.DateTimeUtil;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -26,6 +30,8 @@ public class RemoteBackendService extends MockBackendService {
     private Long currentUserId;
     private String currentUsername;
     private final Map<String, Long> userIdCache = new LinkedHashMap<>();
+    private final Map<String, LocalDateTime> localAdminBans = new HashMap<>();
+    private final Set<String> localAdminUnbans = new HashSet<>();
 
     public RemoteBackendService() {
         this(new ApiClient());
@@ -383,11 +389,8 @@ public class RemoteBackendService extends MockBackendService {
 
     @Override
     public synchronized void addBookToBookList(String username, long listId, String bookTitle) {
-        runRemoteOrFallback(() -> requestData("POST", "/book-lists/" + listId + "/books" + query(Map.of("bookTitle", bookTitle)), null),
-                () -> {
-                    long bookId = resolveBookIdByTitle(bookTitle);
-                    addBookToBookList(username, listId, bookId);
-                });
+        long bookId = resolveBookIdByTitle(bookTitle);
+        addBookToBookList(username, listId, bookId);
     }
 
     @Override
@@ -515,7 +518,7 @@ public class RemoteBackendService extends MockBackendService {
             for (JsonNode item : pageRecords(page)) {
                 AdminUserInfo info = parseAdminUserInfo(item);
                 if (info != null) {
-                    result.add(info);
+                    result.add(applyLocalAdminBanState(info));
                 }
             }
             return result.stream()
@@ -529,12 +532,16 @@ public class RemoteBackendService extends MockBackendService {
     public synchronized void banUser(String username, LocalDateTime until) {
         runRemoteOrFallback(() -> requestData("POST", "/users/ban" + query(mapOf("username", username, "until", until == null ? null : until.toString())), null),
                 () -> super.banUser(username, until));
+        localAdminUnbans.remove(username);
+        localAdminBans.put(username, until);
     }
 
     @Override
     public synchronized void unbanUser(String username) {
         runRemoteOrFallback(() -> requestData("POST", "/users/unban" + query(Map.of("username", username)), null),
                 () -> super.unbanUser(username));
+        localAdminBans.remove(username);
+        localAdminUnbans.add(username);
     }
 
     @Override
@@ -1076,7 +1083,7 @@ public class RemoteBackendService extends MockBackendService {
         }
         List<BookCard> cards = listBooks(normalized, List.of(), 1, 1000).items();
         List<BookCard> exactMatches = cards.stream()
-                .filter(card -> card.title().equalsIgnoreCase(normalized))
+                .filter(card -> card.title().equals(normalized))
                 .toList();
         if (exactMatches.size() == 1) {
             return exactMatches.getFirst().id();
@@ -1084,13 +1091,7 @@ public class RemoteBackendService extends MockBackendService {
         if (exactMatches.size() > 1) {
             throw new IllegalStateException("存在多本同名图书，请在图书详情页加入书单");
         }
-        if (cards.size() == 1) {
-            return cards.getFirst().id();
-        }
-        if (cards.isEmpty()) {
-            return super.findBookByTitle(normalized).id();
-        }
-        throw new IllegalStateException("匹配到多本图书，请输入完整书名");
+        throw new IllegalArgumentException("书名不存在");
     }
 
     private List<CommentItem> topLevelComments(List<CommentItem> comments) {
@@ -1299,7 +1300,7 @@ public class RemoteBackendService extends MockBackendService {
         if (text.contains("封禁")) {
             String until = text(firstPresent(data, "bannedUntil", "banExpireTime", "until", "unbanTime"));
             if (until != null && !until.isBlank()) {
-                return "您已被封禁，解封时间是 " + until;
+                return "您已被封禁，解封时间是 " + DateTimeUtil.formatDateTimeText(until);
             }
             if (!text.contains("您已被封禁")) {
                 return "您已被封禁" + (text.contains("解封时间") ? "" : "，请联系管理员确认解封时间");
@@ -1574,6 +1575,19 @@ public class RemoteBackendService extends MockBackendService {
             bannedUntil = null;
         }
         return new AdminUserInfo(username, role, createdAt, bannedUntil);
+    }
+
+    private AdminUserInfo applyLocalAdminBanState(AdminUserInfo info) {
+        if (info == null) {
+            return null;
+        }
+        if (localAdminUnbans.contains(info.username())) {
+            return new AdminUserInfo(info.username(), info.role(), info.createdAt(), null);
+        }
+        if (localAdminBans.containsKey(info.username())) {
+            return new AdminUserInfo(info.username(), info.role(), info.createdAt(), localAdminBans.get(info.username()));
+        }
+        return info;
     }
 
     private UserProfile parseUserProfile(JsonNode node, String target) {

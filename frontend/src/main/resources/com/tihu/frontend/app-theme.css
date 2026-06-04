@@ -433,6 +433,101 @@
     -fx-font-weight: 800;
 }
 
+.home-page {
+    -fx-spacing: 18;
+}
+
+.home-hero {
+    -fx-background-color: linear-gradient(to bottom right, #FFFFFF, #D7F6EE);
+    -fx-background-radius: 18;
+    -fx-border-color: #B4DDD4;
+    -fx-border-radius: 18;
+    -fx-border-width: 1;
+    -fx-padding: 26 30;
+    -fx-effect: dropshadow(gaussian, rgba(31, 45, 51, 0.14), 22, 0.18, 0, 6);
+}
+
+.home-brand-mark {
+    -fx-min-height: 106;
+    -fx-pref-height: 106;
+}
+
+.home-brand-main,
+.home-brand-accent,
+.home-brand-shadow {
+    -fx-font-family: "Segoe UI Black", "Microsoft YaHei UI", sans-serif;
+    -fx-font-size: 78px;
+    -fx-font-weight: 900;
+    -fx-font-smoothing-type: lcd;
+}
+
+.home-brand-main {
+    -fx-fill: linear-gradient(to bottom, #1F2D33, #2F8F7E, #6AD2B4);
+    -fx-stroke: rgba(255, 255, 255, 0.82);
+    -fx-stroke-width: 1.2;
+    -fx-effect: dropshadow(gaussian, rgba(47, 125, 108, 0.42), 18, 0.18, 0, 5);
+}
+
+.home-brand-accent {
+    -fx-fill: rgba(244, 185, 66, 0.54);
+}
+
+.home-brand-shadow {
+    -fx-fill: rgba(67, 143, 176, 0.22);
+}
+
+.home-welcome {
+    -fx-font-size: 22px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -fx-text-main;
+}
+
+.home-tagline {
+    -fx-font-size: 14.5px;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.home-stat {
+    -fx-background-color: linear-gradient(to bottom right, #FFFFFF, #EEF7F5);
+    -fx-background-radius: 14;
+    -fx-border-color: #B7D7CF;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 15 18;
+    -fx-min-width: 170;
+    -fx-effect: dropshadow(gaussian, rgba(31, 45, 51, 0.10), 12, 0.14, 0, 3);
+}
+
+.home-stat-kicker {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #438FB0;
+}
+
+.home-stat-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -fx-text-main;
+}
+
+.home-panel {
+    -fx-background-color: linear-gradient(to bottom right, #F7FAFA, #E8EFEE);
+    -fx-background-radius: 16;
+    -fx-border-color: #C5DCD7;
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-padding: 18;
+}
+
+.home-panel .section-title {
+    -fx-font-size: 20px;
+}
+
+.home-panel .helper-text {
+    -fx-font-size: 15.5px;
+    -fx-line-spacing: 4px;
+}
+
 /* Night Mode */
 
 .root.theme-dark {
@@ -725,6 +820,53 @@
 .theme-dark .dialog-pane .content,
 .theme-dark .dialog-pane .header-panel .label {
     -fx-text-fill: #E8F2F0;
+}
+
+.theme-dark .home-hero {
+    -fx-background-color: linear-gradient(to bottom right, #24363A, #162529);
+    -fx-border-color: #38545A;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.36), 22, 0.20, 0, 7);
+}
+
+.theme-dark .home-brand-main {
+    -fx-fill: linear-gradient(to bottom, #E8F2F0, #7BE0C4, #67B7D4);
+    -fx-stroke: rgba(13, 35, 32, 0.78);
+    -fx-effect: dropshadow(gaussian, rgba(106, 210, 180, 0.34), 18, 0.18, 0, 5);
+}
+
+.theme-dark .home-brand-accent {
+    -fx-fill: rgba(244, 185, 66, 0.42);
+}
+
+.theme-dark .home-brand-shadow {
+    -fx-fill: rgba(103, 183, 212, 0.24);
+}
+
+.theme-dark .home-welcome {
+    -fx-text-fill: #E8F2F0;
+}
+
+.theme-dark .home-tagline {
+    -fx-text-fill: #B6C9C5;
+}
+
+.theme-dark .home-stat {
+    -fx-background-color: linear-gradient(to bottom right, #22363A, #18272B);
+    -fx-border-color: #38545A;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 13, 0.16, 0, 4);
+}
+
+.theme-dark .home-stat-kicker {
+    -fx-text-fill: #7AC5DF;
+}
+
+.theme-dark .home-stat-title {
+    -fx-text-fill: #E8F2F0;
+}
+
+.theme-dark .home-panel {
+    -fx-background-color: linear-gradient(to bottom right, #213438, #1B2A2E);
+    -fx-border-color: #334B50;
 }
 
 .theme-dark .rating-star-empty {

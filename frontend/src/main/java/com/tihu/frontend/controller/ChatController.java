@@ -2,12 +2,12 @@ package com.tihu.frontend.controller;
 
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.DateTimeUtil;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 
-import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 
 public class ChatController implements MainContentController {
@@ -84,7 +84,6 @@ public class ChatController implements MainContentController {
     }
 
     private void refresh() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         if (peer == null || peer.isBlank()) {
             messageListView.getItems().clear();
             return;
@@ -94,7 +93,7 @@ public class ChatController implements MainContentController {
                 .map(item -> {
                     boolean mine = context.username().equals(item.from());
                     String sender = mine ? "我" : item.from();
-                    return "[" + item.time().format(formatter) + "] " + sender + ": " + item.content();
+                    return "[" + DateTimeUtil.format(item.time()) + "] " + sender + ": " + item.content();
                 })
                 .toList());
         if (!messageListView.getItems().isEmpty()) {

@@ -128,11 +128,11 @@ public class BookListServiceImpl extends ServiceImpl<BookListMapper, BookList> i
             throw new ApiException(400, "图书名称不能为空");
         }
         Book book = bookMapper.selectOne(new LambdaQueryWrapper<Book>()
-            .eq(Book::getTitle, bookTitle.trim())
-            .eq(Book::getIsDeleted, 0)
-            .last("LIMIT 1"));
+                .eq(Book::getTitle, bookTitle.trim())
+                .eq(Book::getIsDeleted, 0)
+                .last("LIMIT 1"));
         if (book == null) {
-            throw new ApiException(404, "图书不存在");
+            throw new ApiException(404, "书名不存在");
         }
         addBookToList(bookListId, book.getId(), userId);
     }

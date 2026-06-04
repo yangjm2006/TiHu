@@ -2,13 +2,13 @@ package com.tihu.frontend.controller;
 
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
+import com.tihu.frontend.utils.DateTimeUtil;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
-import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -76,7 +76,6 @@ public class ConversationsController implements MainContentController {
 
     private void applyFilter() {
         String keyword = keywordField.getText() == null ? "" : keywordField.getText().trim().toLowerCase(Locale.ROOT);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         filteredConversations = allConversations.stream()
                 .filter(item -> keyword.isBlank()
                         || item.peer().toLowerCase(Locale.ROOT).contains(keyword)
@@ -84,7 +83,7 @@ public class ConversationsController implements MainContentController {
                 .sorted(Comparator.comparing(MockBackendService.ConversationPreview::lastTime).reversed())
                 .toList();
         conversationListView.getItems().setAll(filteredConversations.stream()
-                .map(item -> item.peer() + " | " + item.lastTime().format(formatter) + " | " + abbreviate(item.lastMessage()))
+                .map(item -> item.peer() + " | " + DateTimeUtil.format(item.lastTime()) + " | " + abbreviate(item.lastMessage()))
                 .toList());
     }
 

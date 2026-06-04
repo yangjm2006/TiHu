@@ -3,6 +3,7 @@ package com.tihu.frontend.controller;
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppContext.UserProfileReturnTarget;
+import com.tihu.frontend.utils.DateTimeUtil;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
@@ -65,7 +66,7 @@ public class AdminUsersController implements MainContentController {
             LocalDateTime until = LocalDateTime.now().plusHours(hours);
             context.service().banUser(username, until);
             refresh();
-            messageLabel.setText(username + " 已封禁至 " + until);
+            messageLabel.setText(username + " 已封禁至 " + DateTimeUtil.format(until));
         } catch (Exception ex) {
             messageLabel.setText(ex.getMessage());
         }
@@ -154,10 +155,10 @@ public class AdminUsersController implements MainContentController {
     }
 
     private String banText(LocalDateTime bannedUntil) {
-        return bannedUntil == null ? "正常" : "封禁至 " + bannedUntil;
+        return bannedUntil == null ? "正常" : "封禁至 " + DateTimeUtil.format(bannedUntil);
     }
 
     private String timeText(LocalDateTime time) {
-        return time == null ? "-" : time.toString();
+        return DateTimeUtil.formatOr(time, "-");
     }
 }

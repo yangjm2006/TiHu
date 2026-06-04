@@ -1,6 +1,7 @@
 package com.tihu.frontend.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tihu.frontend.utils.DateTimeUtil;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -613,7 +614,7 @@ public class MockBackendService {
             throw new IllegalArgumentException("图书名称不能为空");
         }
         List<Book> exactMatches = books.values().stream()
-                .filter(book -> book.title().equalsIgnoreCase(normalized))
+                .filter(book -> book.title().equals(normalized))
                 .toList();
         if (exactMatches.size() == 1) {
             return exactMatches.getFirst();
@@ -621,16 +622,7 @@ public class MockBackendService {
         if (exactMatches.size() > 1) {
             throw new IllegalStateException("存在多本同名图书，请在图书详情页加入书单");
         }
-        List<Book> containsMatches = books.values().stream()
-                .filter(book -> book.title().toLowerCase(Locale.ROOT).contains(normalized.toLowerCase(Locale.ROOT)))
-                .toList();
-        if (containsMatches.size() == 1) {
-            return containsMatches.getFirst();
-        }
-        if (containsMatches.isEmpty()) {
-            throw new IllegalArgumentException("未找到图书：" + normalized);
-        }
-        throw new IllegalStateException("匹配到多本图书，请输入完整书名");
+        throw new IllegalArgumentException("书名不存在");
     }
 
     public synchronized void deleteBook(int bookId) {
@@ -925,7 +917,7 @@ public class MockBackendService {
     }
 
     private String formatBanLoginMessage(LocalDateTime bannedUntil) {
-        return "您已被封禁，解封时间是 " + bannedUntil;
+        return "您已被封禁，解封时间是 " + DateTimeUtil.format(bannedUntil);
     }
 
     private void moveUserData(String from, String to) {

@@ -1,10 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
 <VBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.tihu.frontend.controller.HomeController"
-      spacing="14"
-      styleClass="card">
-    <Label text="TiHu" styleClass="page-title"/>
-    <Label fx:id="welcomeLabel" styleClass="section-title"/>
+      spacing="18"
+      styleClass="home-page">
+    <VBox spacing="12" styleClass="home-hero">
+        <StackPane alignment="CENTER_LEFT" styleClass="home-brand-mark">
+            <Text text="TiHu" translateX="5" translateY="6" styleClass="home-brand-shadow"/>
+            <Text text="TiHu" translateX="-4" translateY="-3" styleClass="home-brand-accent"/>
+            <Text text="TiHu" styleClass="home-brand-main"/>
+        </StackPane>
+        <Label fx:id="welcomeLabel" styleClass="home-welcome"/>
+        <Label text="阅读、收藏、书单、评论与私信集中在一个清爽的桌面社区里。" styleClass="home-tagline" wrapText="true"/>
+    </VBox>
+
+    <HBox spacing="12">
+        <VBox spacing="4" styleClass="home-stat">
+            <Label text="Books" styleClass="home-stat-kicker"/>
+            <Label text="发现好书" styleClass="home-stat-title"/>
+        </VBox>
+        <VBox spacing="4" styleClass="home-stat">
+            <Label text="Lists" styleClass="home-stat-kicker"/>
+            <Label text="整理书单" styleClass="home-stat-title"/>
+        </VBox>
+        <VBox spacing="4" styleClass="home-stat">
+            <Label text="Talk" styleClass="home-stat-kicker"/>
+            <Label text="交流评论" styleClass="home-stat-title"/>
+        </VBox>
+    </HBox>
+
+    <VBox spacing="10" styleClass="home-panel">
+        <Label text="项目核心贡献" styleClass="section-title"/>
+        <Label wrapText="true" styleClass="helper-text"
+               text="杨佳明：项目总负责人，把控整体方向与功能边界，组织测试闭环并推进缺陷修复；引入 Sa-Token 简化登录、会话与角色鉴权，用 MyBatis-Plus 收敛重复 SQL，让后端开发效率和接口稳定性都提上来。"/>
+        <Label wrapText="true" styleClass="helper-text"
+               text="杨盛超：后端分负责人，统一前后端 API 规范，推动接口按真实前端调用路径落地；完善全局异常捕获与统一响应，配合前端 Mock 测试和漏洞排查，把联调成本和线上风险压下去。"/>
+        <Label wrapText="true" styleClass="helper-text"
+               text="薛心昊：数据库分负责人，设计 MySQL 数据模型承载用户、图书、评论、收藏、关注、私信等核心数据；结合 Redis 加速非关系型与高频数据读取，并负责项目报告编写，把系统设计讲清楚、落到文档里。"/>
+        <Label wrapText="true" styleClass="helper-text"
+               text="徐浩腾：前端分负责人，使用 Scene Builder 搭建主要 JavaFX 页面，持续打磨 UI、交互和页面一致性；调整日间模式与夜间模式配色，让系统不仅功能完整，也更像一个真正可交付的产品。"/>
+    </VBox>
 </VBox>

@@ -174,7 +174,7 @@ class RemoteBackendServiceApiContractTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> service.login("banned", "Banned123"));
 
-        assertEquals("您已被封禁，解封时间是 2026-06-02T12:00:00", ex.getMessage());
+        assertEquals("您已被封禁，解封时间是 2026-06-02 12:00:00", ex.getMessage());
         assertTrue(apiClient.requestLog.stream().anyMatch(line -> line.equals("POST /users/login")));
     }
 
@@ -217,6 +217,34 @@ class RemoteBackendServiceApiContractTest {
         assertTrue(apiClient.requestLog.stream().anyMatch(line ->
                 line.startsWith("GET /users/admin?")
                         && line.contains("sort=created_at_asc")));
+    }
+
+    @Test
+    void shouldResolveExactBookTitleBeforeAddingToBookList() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        service.addBookToBookList("alice", 801L, "初始三体");
+
+        assertTrue(apiClient.requestLog.stream().anyMatch(line ->
+                line.equals("POST /book-lists/801/books?bookId=100")));
+        assertTrue(apiClient.requestLog.stream().noneMatch(line ->
+                line.startsWith("POST /book-lists/801/books?bookTitle=")));
+    }
+
+    @Test
+    void shouldShowAdminUserAsNormalAfterUnbanEvenWhenListReturnsStaleBanTime() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        service.registerUser("alice", "Alice123");
+        apiClient.users.put("alice", new FakeApiClient.UserRecord(1, "alice", "Alice123", "USER",
+                "2026-06-01T10:00:00", "2026-06-10T12:00:00"));
+
+        service.unbanUser("alice");
+        List<MockBackendService.AdminUserInfo> users = service.listAdminUsers();
+
+        assertEquals(null, users.getFirst().bannedUntil());
     }
 
     @Test
@@ -304,7 +332,7 @@ class RemoteBackendServiceApiContractTest {
             String password = node.path("password").asText();
             long id = userSeq++;
             users.put(username, new UserRecord(id, username, password, "USER",
-                    "2026-06-0" + id + "T10:00:00"));
+                    "2026-06-0" + id + "T10:00:00", null));
             return envelope(200, "OK", null);
         }
 
@@ -313,7 +341,7 @@ class RemoteBackendServiceApiContractTest {
             String username = node.path("username").asText();
             String password = node.path("password").asText();
             if ("banned".equals(username)) {
-                return envelope(403, "该用户已被封禁", Map.of("bannedUntil", "2026-06-02T12:00:00"));
+                return envelope(403, "该用户已被封禁", Map.of("bannedUntil", "2026-06-02T12:00:00.123456"));
             }
             UserRecord user = users.get(username);
             if (user == null || !user.password.equals(password)) {
@@ -384,11 +412,16 @@ class RemoteBackendServiceApiContractTest {
         private String listAdminUsers() {
             List<Map<String, Object>> records = users.values().stream()
                     .sorted((left, right) -> left.createdAt.compareTo(right.createdAt))
-                    .map(user -> Map.<String, Object>of(
-                            "username", user.username,
-                            "role", user.role,
-                            "createdAt", user.createdAt
-                    ))
+                    .map(user -> {
+                        Map<String, Object> record = new LinkedHashMap<>();
+                        record.put("username", user.username);
+                        record.put("role", user.role);
+                        record.put("createdAt", user.createdAt);
+                        if (user.bannedUntil != null) {
+                            record.put("bannedUntil", user.bannedUntil);
+                        }
+                        return record;
+                    })
                     .toList();
             return envelope(200, "OK", Map.of(
                     "records", records,
@@ -405,7 +438,8 @@ class RemoteBackendServiceApiContractTest {
             if (user == null) {
                 return envelope(404, "用户不存在", null);
             }
-            users.put(username, new UserRecord(user.id, user.username, user.password, "ADMIN", user.createdAt));
+            users.put(username, new UserRecord(user.id, user.username, user.password, "ADMIN", user.createdAt,
+                    user.bannedUntil));
             return envelope(200, "OK", null);
         }
 
@@ -551,7 +585,8 @@ class RemoteBackendServiceApiContractTest {
             }
         }
 
-        private record UserRecord(long id, String username, String password, String role, String createdAt) {
+        private record UserRecord(long id, String username, String password, String role, String createdAt,
+                                  String bannedUntil) {
         }
 
         private record BookRecord(long id, String title, String author, String description, List<String> tags) {

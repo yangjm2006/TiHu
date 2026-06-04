@@ -119,9 +119,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 throw new ApiException(403, "该用户已被封禁", data);
             } else if (user.getBanExpireTime() != null) {
                 // 解封
+                clearBanState(user.getId());
                 user.setStatus(0);
                 user.setBanExpireTime(null);
-                this.updateById(user);
             }
         }
         
@@ -263,10 +263,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             throw new ApiException(404, "用户不存在");
         }
-        
-        user.setStatus(0);
-        user.setBanExpireTime(null);
-        this.updateById(user);
+
+        clearBanState(userId);
     }
 
     @Override
@@ -290,9 +288,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             throw new ApiException(404, "用户不存在");
         }
-        user.setStatus(0);
-        user.setBanExpireTime(null);
-        this.updateById(user);
+
+        clearBanState(user.getId());
+    }
+
+    private void clearBanState(Long userId) {
+        lambdaUpdate()
+                .set(User::getStatus, 0)
+                .set(User::getBanExpireTime, null)
+                .eq(User::getId, userId)
+                .update();
     }
 
     @Override
@@ -424,5 +429,3 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return this.list(wrapper);
     }
 }
-
-

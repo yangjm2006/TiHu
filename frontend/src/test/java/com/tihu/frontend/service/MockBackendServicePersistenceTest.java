@@ -1,5 +1,6 @@
 package com.tihu.frontend.service;
 
+import com.tihu.frontend.utils.DateTimeUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -111,6 +112,19 @@ class MockBackendServicePersistenceTest {
     }
 
     @Test
+    void bookListShouldRequireExactBookTitleWhenAddingBook() {
+        Path stateFile = tempDir.resolve("backend-state.json");
+        MockBackendService service = new MockBackendService(stateFile);
+        MockBackendService.UserBookList list = service.createBookList("bob", "待读", "", true);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.addBookToBookList("bob", list.id(), "三"));
+
+        assertEquals("书名不存在", ex.getMessage());
+        assertEquals(List.of(), service.getBookList("bob", list.id()).bookIds());
+    }
+
+    @Test
     void bannedUserShouldSeeUnbanTimeWhenLoggingIn() {
         Path stateFile = tempDir.resolve("backend-state.json");
         MockBackendService service = new MockBackendService(stateFile);
@@ -120,7 +134,7 @@ class MockBackendServicePersistenceTest {
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> service.login("bob", "Bob12345"));
-        assertEquals("您已被封禁，解封时间是 " + until, ex.getMessage());
+        assertEquals("您已被封禁，解封时间是 " + DateTimeUtil.format(until), ex.getMessage());
     }
 }
 
