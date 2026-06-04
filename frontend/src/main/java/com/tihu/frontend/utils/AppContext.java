@@ -37,6 +37,11 @@ public final class AppContext {
     private String bookListTagsText = "";
     private int bookListPage = 1;
     private MockBackendService.BookSortMode bookListSortMode = MockBackendService.BookSortMode.DEFAULT;
+    private String adminBookTitleKeyword = "";
+    private String adminBookTagsText = "";
+    private int adminBookPage = 1;
+    private MockBackendService.BookSortMode adminBookSortMode = MockBackendService.BookSortMode.DEFAULT;
+    private Long adminSelectedBookId;
     private boolean showFollowers;
 
     private AppContext() {
@@ -101,6 +106,11 @@ public final class AppContext {
         bookListTagsText = "";
         bookListPage = 1;
         bookListSortMode = MockBackendService.BookSortMode.DEFAULT;
+        adminBookTitleKeyword = "";
+        adminBookTagsText = "";
+        adminBookPage = 1;
+        adminBookSortMode = MockBackendService.BookSortMode.DEFAULT;
+        adminSelectedBookId = null;
         showFollowers = false;
     }
 
@@ -200,6 +210,46 @@ public final class AppContext {
 
     public void setBookListSortMode(MockBackendService.BookSortMode bookListSortMode) {
         this.bookListSortMode = bookListSortMode == null ? MockBackendService.BookSortMode.DEFAULT : bookListSortMode;
+    }
+
+    public String adminBookTitleKeyword() {
+        return adminBookTitleKeyword;
+    }
+
+    public void setAdminBookTitleKeyword(String adminBookTitleKeyword) {
+        this.adminBookTitleKeyword = adminBookTitleKeyword == null ? "" : adminBookTitleKeyword;
+    }
+
+    public String adminBookTagsText() {
+        return adminBookTagsText;
+    }
+
+    public void setAdminBookTagsText(String adminBookTagsText) {
+        this.adminBookTagsText = adminBookTagsText == null ? "" : adminBookTagsText;
+    }
+
+    public int adminBookPage() {
+        return adminBookPage;
+    }
+
+    public void setAdminBookPage(int adminBookPage) {
+        this.adminBookPage = Math.max(1, adminBookPage);
+    }
+
+    public MockBackendService.BookSortMode adminBookSortMode() {
+        return adminBookSortMode;
+    }
+
+    public void setAdminBookSortMode(MockBackendService.BookSortMode adminBookSortMode) {
+        this.adminBookSortMode = adminBookSortMode == null ? MockBackendService.BookSortMode.DEFAULT : adminBookSortMode;
+    }
+
+    public Long adminSelectedBookId() {
+        return adminSelectedBookId;
+    }
+
+    public void setAdminSelectedBookId(Long adminSelectedBookId) {
+        this.adminSelectedBookId = adminSelectedBookId;
     }
 
     public boolean isShowingFollowers() {

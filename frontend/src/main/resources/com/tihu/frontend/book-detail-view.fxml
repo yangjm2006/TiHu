@@ -16,6 +16,9 @@
                 <Button fx:id="backButton" text="← 返回列表" onAction="#onBackToBooks" styleClass="button-secondary"/>
                 <Label fx:id="titleLabel" text="图书标题" styleClass="page-title"/>
                 <Region HBox.hgrow="ALWAYS"/>
+                <Label text="加入书单：" styleClass="form-label"/>
+                <ComboBox fx:id="bookListComboBox" prefWidth="180"/>
+                <Button text="加入" onAction="#onAddToBookList" styleClass="button-secondary"/>
                 <Button fx:id="favoriteButton" text="收藏" onAction="#onCollect" styleClass="button-primary"/>
             </HBox>
             <Label fx:id="metaLabel" text="作者 / 年份 / 评分 / 分类" styleClass="helper-text"/>
@@ -23,61 +26,72 @@
     </top>
 
     <center>
-        <SplitPane dividerPositions="0.52">
-            <VBox spacing="12" style="-fx-padding: 14 14 14 0;">
-                <ImageView fx:id="coverImageView" fitWidth="160" fitHeight="220" preserveRatio="true"/>
-                <Label text="简介" styleClass="section-title"/>
-                <TextArea fx:id="descArea"
-                          editable="false"
-                          wrapText="true"
-                          prefHeight="260"
-                          promptText="这里显示图书简介"/>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" style="-fx-background-color: transparent; -fx-background: transparent;">
+            <VBox spacing="14" style="-fx-padding: 14 4 4 0;">
+                <HBox spacing="30" VBox.vgrow="NEVER">
+                    <VBox spacing="12" minWidth="320" prefWidth="350" maxWidth="370">
+                        <ImageView fx:id="coverImageView" fitWidth="230" fitHeight="310" preserveRatio="true"/>
 
-                <Label text="评分汇总" styleClass="section-title"/>
-                <Label fx:id="ratingSummaryLabel" text="平均分：暂无评分" styleClass="status-text"/>
-                <HBox fx:id="ratingStarsBox" spacing="4" alignment="CENTER_LEFT" styleClass="rating-stars"/>
-                <Label fx:id="favoriteCountLabel" text="收藏人数：0人" styleClass="status-text"/>
-                <TextArea fx:id="distributionArea"
-                          editable="false"
-                          wrapText="true"
-                          promptText="评分分布"/>
+                        <Label text="评分汇总" styleClass="section-title"/>
+                        <Label fx:id="ratingSummaryLabel" text="平均分：暂无评分" styleClass="status-text"/>
+                        <HBox fx:id="ratingStarsBox" spacing="4" alignment="CENTER_LEFT" styleClass="rating-stars"/>
+                        <Label fx:id="favoriteCountLabel" text="收藏人数：0人" styleClass="status-text"/>
 
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="我的评分：" styleClass="form-label"/>
-                    <Spinner fx:id="myScoreSpinner" prefWidth="120"/>
-                    <Button text="提交评分" onAction="#onRate" styleClass="button-primary"/>
+                        <VBox spacing="8">
+                            <Label text="我的评分：" styleClass="form-label"/>
+                            <HBox spacing="8" alignment="CENTER_LEFT">
+                                <Spinner fx:id="myScoreSpinner" prefWidth="104"/>
+                                <Button text="提交" onAction="#onRate" styleClass="button-primary"/>
+                            </HBox>
+                        </VBox>
+
+                    </VBox>
+
+                    <VBox spacing="12" minWidth="390" prefWidth="460" maxWidth="520" HBox.hgrow="ALWAYS">
+                        <Label text="简介" styleClass="section-title"/>
+                        <TextArea fx:id="descArea"
+                                  editable="false"
+                                  wrapText="true"
+                                  prefHeight="210"
+                                  promptText="这里显示图书简介"
+                                  VBox.vgrow="ALWAYS"/>
+
+                        <Label text="评分分布" styleClass="section-title"/>
+                        <TextArea fx:id="distributionArea"
+                                  editable="false"
+                                  wrapText="true"
+                                  prefHeight="150"
+                                  promptText="评分分布"/>
+                    </VBox>
                 </HBox>
 
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="加入书单：" styleClass="form-label"/>
-                    <ComboBox fx:id="bookListComboBox" prefWidth="220"/>
-                    <Button text="加入" onAction="#onAddToBookList" styleClass="button-secondary"/>
-                </HBox>
-            </VBox>
+                <Separator/>
 
-            <VBox spacing="12" style="-fx-padding: 14 0 14 14;">
-                <Label text="评论" styleClass="section-title"/>
-                <ListView fx:id="commentListView" prefHeight="280"/>
+                <VBox spacing="10" VBox.vgrow="ALWAYS">
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="评论" styleClass="section-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="回复选中" onAction="#onReplySelected" styleClass="button-secondary"/>
+                        <Button text="删除/撤回" onAction="#onDeleteOwnComment" styleClass="button-danger"/>
+                        <Button text="赞" onAction="#onUpVote" styleClass="button-secondary"/>
+                        <Button text="踩" onAction="#onDownVote" styleClass="button-secondary"/>
+                    </HBox>
 
-                <HBox spacing="8">
-                    <Button text="回复选中" onAction="#onReplySelected" styleClass="button-secondary"/>
-                    <Button text="删除/撤回" onAction="#onDeleteOwnComment" styleClass="button-danger"/>
-                    <Button text="赞" onAction="#onUpVote" styleClass="button-secondary"/>
-                    <Button text="踩" onAction="#onDownVote" styleClass="button-secondary"/>
-                </HBox>
+                    <ListView fx:id="commentListView" prefHeight="190" VBox.vgrow="ALWAYS"/>
 
-                <Label text="发表短评" styleClass="section-title"/>
-                <TextArea fx:id="commentInputArea"
-                          promptText="写下你的评论..."
-                          wrapText="true"
-                          prefRowCount="4"/>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <TextArea fx:id="commentInputArea"
+                                  promptText="写下你的评论..."
+                                  wrapText="true"
+                                  prefRowCount="2"
+                                  HBox.hgrow="ALWAYS"/>
+                        <Button text="提交评论" onAction="#onSubmitComment" styleClass="button-primary"/>
+                    </HBox>
 
-                <HBox spacing="10">
-                    <Button text="提交评论" onAction="#onSubmitComment" styleClass="button-primary"/>
                     <Label fx:id="messageLabel" wrapText="true" styleClass="status-text"/>
-                </HBox>
+                </VBox>
             </VBox>
-        </SplitPane>
+        </ScrollPane>
     </center>
 
     <bottom>

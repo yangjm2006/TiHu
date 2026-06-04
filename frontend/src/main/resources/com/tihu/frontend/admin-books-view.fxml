@@ -10,69 +10,82 @@
             styleClass="card"
             prefWidth="1000" prefHeight="680">
     <top>
-        <VBox spacing="12" style="-fx-padding: 0 0 14 0;">
-            <VBox spacing="10" styleClass="toolbar-card">
-                <Label text="图书管理" styleClass="section-title"/>
-                <GridPane styleClass="form-grid">
-                    <Label text="书名" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                    <TextField fx:id="titleField" promptText="书名（必填且唯一）" prefWidth="230" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-
-                    <Label text="作者" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
-                    <TextField fx:id="authorField" promptText="作者" prefWidth="190" GridPane.rowIndex="0" GridPane.columnIndex="3"/>
-
-                    <Label text="标签" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="4"/>
-                    <TextField fx:id="tagsField" promptText="标签，空格分隔" prefWidth="230" GridPane.rowIndex="0" GridPane.columnIndex="5"/>
-
-                    <Label text="简介" styleClass="form-label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                    <TextArea fx:id="introArea" promptText="简介" prefRowCount="2" wrapText="true" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.columnSpan="5"/>
-
-                    <Label text="封面" styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                    <HBox spacing="10" style="-fx-alignment: center-left;" GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.columnSpan="5">
-                        <ImageView fx:id="coverPreview" fitWidth="72" fitHeight="96" preserveRatio="true"/>
-                        <Button text="上传封面" onAction="#onUploadCover" styleClass="button-secondary"/>
-                        <Button text="清空封面" onAction="#onClearCover" styleClass="button-secondary"/>
-                        <Label fx:id="coverStatusLabel" text="当前无封面" styleClass="helper-text"/>
-                    </HBox>
-                </GridPane>
-                <HBox spacing="8" style="-fx-alignment: center-left;">
-                    <Button text="新增图书" onAction="#onAddBook" styleClass="button-primary"/>
-                    <Button text="更新选中图书" onAction="#onUpdateBook" styleClass="button-secondary"/>
-                    <Button text="删除选中" onAction="#onDeleteBook" styleClass="button-danger"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Label fx:id="messageLabel" wrapText="true" styleClass="status-text"/>
-                </HBox>
-            </VBox>
-
-            <VBox spacing="10" styleClass="toolbar-card">
-                <HBox spacing="8" style="-fx-alignment: center-left;">
-                    <TextField fx:id="searchTitleField" promptText="按书名搜索" prefWidth="230"/>
-                    <TextField fx:id="searchTagsField" promptText="按标签搜索，空格分隔" prefWidth="260"/>
-                    <Button text="搜索" onAction="#onSearch" styleClass="button-primary"/>
-                    <Button text="重置" onAction="#onResetSearch" styleClass="button-secondary"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Label text="排序：" styleClass="form-label"/>
-                    <ComboBox fx:id="sortBox" prefWidth="150"/>
-                </HBox>
-            </VBox>
+        <VBox spacing="10" styleClass="toolbar-card" style="-fx-padding: 14 16;">
+            <Label text="图书管理" styleClass="section-title"/>
+            <HBox spacing="8" style="-fx-alignment: center-left;">
+                <TextField fx:id="searchTitleField" promptText="按书名搜索" prefWidth="220"/>
+                <TextField fx:id="searchTagsField" promptText="按标签搜索，空格分隔" prefWidth="250"/>
+                <Button text="搜索" onAction="#onSearch" styleClass="button-primary"/>
+                <Button text="重置" onAction="#onResetSearch" styleClass="button-secondary"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label text="排序：" styleClass="form-label"/>
+                <ComboBox fx:id="sortBox" prefWidth="150"/>
+            </HBox>
         </VBox>
     </top>
 
     <center>
-        <TableView fx:id="tableView">
-            <columns>
-                <TableColumn fx:id="titleColumn" text="书名" prefWidth="260"/>
-                <TableColumn fx:id="authorColumn" text="作者" prefWidth="180"/>
-                <TableColumn fx:id="ratingColumn" text="评分" prefWidth="120"/>
-                <TableColumn fx:id="tagsColumn" text="标签摘要" prefWidth="360"/>
-            </columns>
-        </TableView>
-    </center>
+        <SplitPane dividerPositions="0.66" style="-fx-padding: 14 0 0 0;">
+            <BorderPane>
+                <center>
+                    <TableView fx:id="tableView">
+                        <columns>
+                            <TableColumn fx:id="titleColumn" text="书名" prefWidth="230"/>
+                            <TableColumn fx:id="authorColumn" text="作者" prefWidth="150"/>
+                            <TableColumn fx:id="ratingColumn" text="评分" prefWidth="90"/>
+                            <TableColumn fx:id="tagsColumn" text="标签摘要" prefWidth="230"/>
+                        </columns>
+                    </TableView>
+                </center>
+                <bottom>
+                    <HBox spacing="8" style="-fx-padding: 12 0 0 0; -fx-alignment: center-right;">
+                        <Label fx:id="pageInfoLabel" text="第 1/1 页" styleClass="status-text"/>
+                        <Button text="上一页" onAction="#onPrevPage" styleClass="button-secondary"/>
+                        <Button text="下一页" onAction="#onNextPage" styleClass="button-secondary"/>
+                    </HBox>
+                </bottom>
+            </BorderPane>
 
-    <bottom>
-        <HBox spacing="8" style="-fx-padding: 14 0 0 0; -fx-alignment: center-right;">
-            <Label fx:id="pageInfoLabel" text="第 1/1 页" styleClass="status-text"/>
-            <Button text="上一页" onAction="#onPrevPage" styleClass="button-secondary"/>
-            <Button text="下一页" onAction="#onNextPage" styleClass="button-secondary"/>
-        </HBox>
-    </bottom>
+            <VBox spacing="12" styleClass="toolbar-card" minWidth="300" prefWidth="330">
+                <Label text="编辑图书" styleClass="section-title"/>
+
+                <VBox spacing="6">
+                    <Label text="书名" styleClass="form-label"/>
+                    <TextField fx:id="titleField" promptText="书名（必填且唯一）"/>
+                </VBox>
+
+                <VBox spacing="6">
+                    <Label text="作者" styleClass="form-label"/>
+                    <TextField fx:id="authorField" promptText="作者"/>
+                </VBox>
+
+                <VBox spacing="6">
+                    <Label text="标签" styleClass="form-label"/>
+                    <TextField fx:id="tagsField" promptText="标签，空格分隔"/>
+                </VBox>
+
+                <VBox spacing="6">
+                    <Label text="简介" styleClass="form-label"/>
+                    <TextArea fx:id="introArea" promptText="简介" prefRowCount="5" wrapText="true"/>
+                </VBox>
+
+                <HBox spacing="10" style="-fx-alignment: center-left;">
+                    <ImageView fx:id="coverPreview" fitWidth="86" fitHeight="116" preserveRatio="true"/>
+                    <VBox spacing="8">
+                        <Button text="上传封面" onAction="#onUploadCover" styleClass="button-secondary" maxWidth="Infinity"/>
+                        <Button text="清空封面" onAction="#onClearCover" styleClass="button-secondary" maxWidth="Infinity"/>
+                        <Label fx:id="coverStatusLabel" text="当前无封面" styleClass="helper-text" wrapText="true"/>
+                    </VBox>
+                </HBox>
+
+                <HBox spacing="8" style="-fx-alignment: center-left;">
+                    <Button text="新增" onAction="#onAddBook" styleClass="button-primary"/>
+                    <Button text="更新" onAction="#onUpdateBook" styleClass="button-secondary"/>
+                    <Button text="删除" onAction="#onDeleteBook" styleClass="button-danger"/>
+                </HBox>
+
+                <Label fx:id="messageLabel" wrapText="true" styleClass="status-text"/>
+            </VBox>
+        </SplitPane>
+    </center>
 </BorderPane>
