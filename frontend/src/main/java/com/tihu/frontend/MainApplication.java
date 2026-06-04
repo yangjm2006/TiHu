@@ -3,6 +3,7 @@ package com.tihu.frontend;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppTheme;
@@ -15,6 +16,7 @@ public class MainApplication extends Application {
         FXMLLoader fxmlLoader = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
         Scene scene = AppTheme.scene(fxmlLoader.load(), 600, 440);
         stage.setTitle("TiHu");
+        stage.getIcons().add(new Image(MainApplication.class.getResourceAsStream("app-icon.png")));
         stage.setScene(scene);
         stage.show();
     }
