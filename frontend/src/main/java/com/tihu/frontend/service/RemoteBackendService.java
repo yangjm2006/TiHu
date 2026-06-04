@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -503,6 +504,28 @@ public class RemoteBackendService extends MockBackendService {
     }
 
     @Override
+    public synchronized List<AdminUserInfo> listAdminUsers() {
+        return remoteOrFallback(() -> {
+            JsonNode page = requestPageData("/users/admin" + query(Map.of(
+                    "page", 1,
+                    "size", 1000,
+                    "sort", "created_at_asc"
+            )));
+            List<AdminUserInfo> result = new ArrayList<>();
+            for (JsonNode item : pageRecords(page)) {
+                AdminUserInfo info = parseAdminUserInfo(item);
+                if (info != null) {
+                    result.add(info);
+                }
+            }
+            return result.stream()
+                    .sorted(Comparator.comparing(AdminUserInfo::createdAt,
+                            Comparator.nullsLast(Comparator.naturalOrder())))
+                    .toList();
+        }, super::listAdminUsers);
+    }
+
+    @Override
     public synchronized void banUser(String username, LocalDateTime until) {
         runRemoteOrFallback(() -> requestData("POST", "/users/ban" + query(mapOf("username", username, "until", until == null ? null : until.toString())), null),
                 () -> super.banUser(username, until));
@@ -512,6 +535,12 @@ public class RemoteBackendService extends MockBackendService {
     public synchronized void unbanUser(String username) {
         runRemoteOrFallback(() -> requestData("POST", "/users/unban" + query(Map.of("username", username)), null),
                 () -> super.unbanUser(username));
+    }
+
+    @Override
+    public synchronized void grantAdmin(String username) {
+        runRemoteOrFallback(() -> requestData("POST", "/users/grant-admin" + query(Map.of("username", username)), null),
+                () -> super.grantAdmin(username));
     }
 
     @Override
@@ -1510,6 +1539,43 @@ public class RemoteBackendService extends MockBackendService {
         return new BanInfo(username, until);
     }
 
+    private AdminUserInfo parseAdminUserInfo(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        JsonNode userNode = firstPresent(node, "userInfo", "user", "profile", "account");
+        if (userNode == null || userNode.isMissingNode() || userNode.isNull()) {
+            userNode = node;
+        }
+        String username = safe(text(firstPresent(userNode, "username", "user", "name")));
+        if (username.isBlank()) {
+            return null;
+        }
+        Role role = parseRole(text(firstPresent(userNode, "role", "userRole")));
+        if (role == null) {
+            role = parseRole(text(firstPresent(node, "role", "userRole")));
+        }
+        if (role == null) {
+            role = Role.USER;
+        }
+        LocalDateTime createdAt = parseNullableDateTime(text(firstPresent(userNode, "createdAt", "createTime",
+                "registerTime", "registeredAt", "registrationTime")));
+        if (createdAt == null && userNode != node) {
+            createdAt = parseNullableDateTime(text(firstPresent(node, "createdAt", "createTime", "registerTime",
+                    "registeredAt", "registrationTime")));
+        }
+        LocalDateTime bannedUntil = parseNullableDateTime(text(firstPresent(userNode, "bannedUntil", "banExpireTime",
+                "until", "unbanTime")));
+        if (bannedUntil == null && userNode != node) {
+            bannedUntil = parseNullableDateTime(text(firstPresent(node, "bannedUntil", "banExpireTime", "until",
+                    "unbanTime")));
+        }
+        if (bannedUntil != null && !bannedUntil.isAfter(LocalDateTime.now())) {
+            bannedUntil = null;
+        }
+        return new AdminUserInfo(username, role, createdAt, bannedUntil);
+    }
+
     private UserProfile parseUserProfile(JsonNode node, String target) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
@@ -1607,6 +1673,13 @@ public class RemoteBackendService extends MockBackendService {
         } catch (Exception ex) {
             return LocalDateTime.now();
         }
+    }
+
+    private LocalDateTime parseNullableDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return parseDateTime(value);
     }
 
     private JsonNode firstPresent(JsonNode node, String... names) {

@@ -195,6 +195,31 @@ class RemoteBackendServiceApiContractTest {
     }
 
     @Test
+    void shouldLoadAdminUsersAndGrantAdminByUsername() {
+        FakeApiClient apiClient = new FakeApiClient();
+        RemoteBackendService service = new RemoteBackendService(apiClient);
+
+        service.registerUser("alice", "Alice123");
+        service.registerUser("bob", "Bob12345");
+        service.grantAdmin("alice");
+
+        List<MockBackendService.AdminUserInfo> users = service.listAdminUsers();
+
+        assertEquals(2, users.size());
+        assertEquals("alice", users.getFirst().username());
+        assertEquals(MockBackendService.Role.ADMIN, users.stream()
+                .filter(user -> "alice".equals(user.username()))
+                .findFirst()
+                .orElseThrow()
+                .role());
+        assertTrue(apiClient.requestLog.stream().anyMatch(line ->
+                line.equals("POST /users/grant-admin?username=alice")));
+        assertTrue(apiClient.requestLog.stream().anyMatch(line ->
+                line.startsWith("GET /users/admin?")
+                        && line.contains("sort=created_at_asc")));
+    }
+
+    @Test
     void shouldLoadOtherUserProfileAndFollowListsByUsername() {
         FakeApiClient apiClient = new FakeApiClient();
         RemoteBackendService service = new RemoteBackendService(apiClient);
@@ -262,6 +287,8 @@ class RemoteBackendServiceApiContractTest {
                 default -> path.startsWith("/books?") ? listBooks(path)
                         : path.startsWith("/collections?") ? listCollections()
                         : path.startsWith("/comments/book/") ? listBookComments()
+                        : path.startsWith("/users/admin?") ? listAdminUsers()
+                        : path.startsWith("/users/grant-admin?") ? grantAdmin(path)
                         : path.startsWith("/users/profile/") ? getUserProfile(path)
                         : path.startsWith("/follows/user/") ? listUserFollows(path)
                         : path.startsWith("/follows/followers?") ? listFollowers(path)
@@ -275,7 +302,9 @@ class RemoteBackendServiceApiContractTest {
             JsonNode node = read(body);
             String username = node.path("username").asText();
             String password = node.path("password").asText();
-            users.put(username, new UserRecord(userSeq++, username, password, "USER"));
+            long id = userSeq++;
+            users.put(username, new UserRecord(id, username, password, "USER",
+                    "2026-06-0" + id + "T10:00:00"));
             return envelope(200, "OK", null);
         }
 
@@ -350,6 +379,34 @@ class RemoteBackendServiceApiContractTest {
             data.put("comments", List.of());
             data.put("replies", List.of());
             return envelope(200, "OK", data);
+        }
+
+        private String listAdminUsers() {
+            List<Map<String, Object>> records = users.values().stream()
+                    .sorted((left, right) -> left.createdAt.compareTo(right.createdAt))
+                    .map(user -> Map.<String, Object>of(
+                            "username", user.username,
+                            "role", user.role,
+                            "createdAt", user.createdAt
+                    ))
+                    .toList();
+            return envelope(200, "OK", Map.of(
+                    "records", records,
+                    "total", records.size(),
+                    "pages", 1,
+                    "current", 1,
+                    "size", 1000
+            ));
+        }
+
+        private String grantAdmin(String path) {
+            String username = queryValue(path, "username");
+            UserRecord user = users.get(username);
+            if (user == null) {
+                return envelope(404, "用户不存在", null);
+            }
+            users.put(username, new UserRecord(user.id, user.username, user.password, "ADMIN", user.createdAt));
+            return envelope(200, "OK", null);
         }
 
         private String listBookComments() {
@@ -494,7 +551,7 @@ class RemoteBackendServiceApiContractTest {
             }
         }
 
-        private record UserRecord(long id, String username, String password, String role) {
+        private record UserRecord(long id, String username, String password, String role, String createdAt) {
         }
 
         private record BookRecord(long id, String title, String author, String description, List<String> tags) {

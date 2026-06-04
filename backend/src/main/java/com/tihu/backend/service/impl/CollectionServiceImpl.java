@@ -33,7 +33,7 @@ public class CollectionServiceImpl extends ServiceImpl<CollectionMapper, Collect
 
         Collection existing = this.getOne(new LambdaQueryWrapper<Collection>().eq(Collection::getUserId, userId).eq(Collection::getBookId, bookId));
         if (existing != null) {
-            throw new ApiException(409, "已收藏过该图书");
+            return;
         }
         
         Collection collection = new Collection();

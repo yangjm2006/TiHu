@@ -27,7 +27,7 @@ public class FavoritesController implements MainContentController {
     @FXML private Label pageInfoLabel;
     @FXML private Label messageLabel;
 
-    private static final int PAGE_SIZE = 6;
+    private static final int PAGE_SIZE = 9;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final AppContext context = AppContext.getInstance();

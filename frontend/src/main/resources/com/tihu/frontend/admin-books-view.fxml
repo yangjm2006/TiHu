@@ -25,7 +25,7 @@
     </top>
 
     <center>
-        <SplitPane dividerPositions="0.66" style="-fx-padding: 14 0 0 0;">
+        <SplitPane dividerPositions="0.69" style="-fx-padding: 14 0 0 0;">
             <BorderPane>
                 <center>
                     <TableView fx:id="tableView">
@@ -46,7 +46,7 @@
                 </bottom>
             </BorderPane>
 
-            <VBox spacing="12" styleClass="toolbar-card" minWidth="300" prefWidth="330">
+            <VBox spacing="12" styleClass="toolbar-card" minWidth="280" prefWidth="310">
                 <Label text="编辑图书" styleClass="section-title"/>
 
                 <VBox spacing="6">

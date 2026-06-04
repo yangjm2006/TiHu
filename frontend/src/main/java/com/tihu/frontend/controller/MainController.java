@@ -5,6 +5,7 @@ import com.tihu.frontend.utils.AppTheme;
 import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppContext.BookListDetailReturnTarget;
 import com.tihu.frontend.utils.AppContext.BookDetailReturnTarget;
+import com.tihu.frontend.utils.AppContext.UserProfileReturnTarget;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -107,7 +108,12 @@ public class MainController {
     }
 
     public void openUserProfile(String username) {
+        openUserProfile(username, UserProfileReturnTarget.NONE);
+    }
+
+    public void openUserProfile(String username, UserProfileReturnTarget returnTarget) {
         context.setViewedProfileUsername(username);
+        context.setUserProfileReturnTarget(returnTarget);
         loadContent("user-profile-view.fxml");
     }
 
@@ -141,7 +147,7 @@ public class MainController {
     @FXML public void onFollowers() { openFollowList(context.username(), true); }
     @FXML public void onConversations() { loadContent("conversations-view.fxml"); }
     @FXML public void onAdminBooks() { loadContent("admin-books-view.fxml"); }
-    @FXML private void onAdminUsers() { loadContent("admin-users-view.fxml"); }
+    @FXML public void onAdminUsers() { loadContent("admin-users-view.fxml"); }
     @FXML private void onAdminComments() { loadContent("admin-comments-view.fxml"); }
 
     @FXML

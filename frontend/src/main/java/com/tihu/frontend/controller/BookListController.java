@@ -28,7 +28,7 @@ public class BookListController implements MainContentController {
 
     private final AppContext context = AppContext.getInstance();
     private MainController mainController;
-    private static final int PAGE_SIZE = 7;
+    private static final int PAGE_SIZE = 9;
     private int currentPage = 1;
     private int totalPages = 1;
     private boolean restoringState;

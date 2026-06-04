@@ -35,7 +35,7 @@
             <Label text="管理员" fx:id="adminLabel" styleClass="nav-section"/>
             <VBox fx:id="adminBox" spacing="8">
                 <Button text="图书管理" onAction="#onAdminBooks" styleClass="nav-item"/>
-                <Button text="用户封禁" onAction="#onAdminUsers" styleClass="nav-item"/>
+                <Button text="用户管理" onAction="#onAdminUsers" styleClass="nav-item"/>
                 <Button text="评论管理" onAction="#onAdminComments" styleClass="nav-item"/>
             </VBox>
         </VBox>

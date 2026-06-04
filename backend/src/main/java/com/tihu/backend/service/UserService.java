@@ -58,6 +58,11 @@ public interface UserService extends IService<User> {
     void unbanUserByUsername(String username);
 
     /**
+     * 按用户名授予管理员权限
+     */
+    void grantAdminByUsername(String username);
+
+    /**
      * 获取用户主页信息（包含评论、书单、关注等）
      */
     Object getUserProfile(String username);

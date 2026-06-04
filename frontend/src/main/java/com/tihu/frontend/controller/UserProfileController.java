@@ -3,6 +3,7 @@ package com.tihu.frontend.controller;
 import com.tihu.frontend.service.MockBackendService;
 import com.tihu.frontend.utils.AppContext;
 import com.tihu.frontend.utils.AppContext.BookListDetailReturnTarget;
+import com.tihu.frontend.utils.AppContext.UserProfileReturnTarget;
 import com.tihu.frontend.utils.ImageDataUtil;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
@@ -22,6 +23,7 @@ public class UserProfileController implements MainContentController {
     @FXML private ListView<String> bookListsView;
     @FXML private Label messageLabel;
     @FXML private javafx.scene.control.Button followToggleButton;
+    @FXML private javafx.scene.control.Button backButton;
 
     private final AppContext context = AppContext.getInstance();
     private MainController mainController;
@@ -45,6 +47,9 @@ public class UserProfileController implements MainContentController {
 
     @Override
     public void onShow() {
+        boolean fromAdminUsers = context.userProfileReturnTarget() == UserProfileReturnTarget.ADMIN_USERS;
+        backButton.setVisible(fromAdminUsers);
+        backButton.setManaged(fromAdminUsers);
         String target = context.viewedProfileUsername();
         if (target == null || target.isBlank()) {
             target = context.username();
@@ -56,6 +61,14 @@ public class UserProfileController implements MainContentController {
     @FXML
     private void onLoadProfile() {
         loadProfile();
+    }
+
+    @FXML
+    private void onBack() {
+        if (context.userProfileReturnTarget() == UserProfileReturnTarget.ADMIN_USERS && mainController != null) {
+            context.setUserProfileReturnTarget(UserProfileReturnTarget.NONE);
+            mainController.onAdminUsers();
+        }
     }
 
     @FXML

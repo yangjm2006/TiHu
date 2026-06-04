@@ -7,15 +7,28 @@
       fx:controller="com.tihu.frontend.controller.AdminUsersController"
       spacing="12"
       styleClass="card">
-    <Label text="用户管理 - 封禁/解封" styleClass="section-title"/>
+    <Label text="用户管理" styleClass="section-title"/>
     <HBox spacing="8">
-        <TextField fx:id="usernameField" promptText="用户名"/>
-        <TextField fx:id="hoursField" promptText="封禁小时数（如24）"/>
+        <TextField fx:id="usernameField" promptText="用户名" prefWidth="160"/>
+        <TextField fx:id="hoursField" promptText="封禁小时数（如24）" prefWidth="160"/>
         <Button text="封禁" onAction="#onBan" styleClass="button-danger"/>
         <Button text="解除封禁" onAction="#onUnban" styleClass="button-secondary"/>
+        <Button text="设为管理员" onAction="#onGrantAdmin" styleClass="button-primary"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="刷新" onAction="#onRefresh" styleClass="button-secondary"/>
     </HBox>
-    <Label text="被封禁用户列表（按解封时间排序，选中后可直接解除封禁）：" styleClass="helper-text"/>
-    <ListView fx:id="bannedListView" prefHeight="480"/>
+    <Label text="全部用户列表（按注册时间从旧到新排序，双击可查看主页）：" styleClass="helper-text"/>
+    <TableView fx:id="usersTableView" prefHeight="520">
+        <columns>
+            <TableColumn fx:id="usernameColumn" text="用户名" prefWidth="180"/>
+            <TableColumn fx:id="roleColumn" text="权限" prefWidth="120"/>
+            <TableColumn fx:id="createdAtColumn" text="注册时间" prefWidth="220"/>
+            <TableColumn fx:id="bannedUntilColumn" text="状态" prefWidth="260"/>
+        </columns>
+        <columnResizePolicy>
+            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+        </columnResizePolicy>
+    </TableView>
     <Label fx:id="messageLabel" styleClass="error-text" wrapText="true"/>
 </VBox>
 

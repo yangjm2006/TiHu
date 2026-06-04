@@ -94,10 +94,14 @@ public class MockBackendService {
     public record BanInfo(String username, LocalDateTime bannedUntil) {
     }
 
+    public record AdminUserInfo(String username, Role role, LocalDateTime createdAt, LocalDateTime bannedUntil) {
+    }
+
     private static class UserEntity {
         private String username;
         private String password;
         private Role role;
+        private LocalDateTime createdAt;
         private LocalDateTime bannedUntil;
         private String avatarImage;
 
@@ -105,6 +109,7 @@ public class MockBackendService {
             this.username = username;
             this.password = password;
             this.role = role;
+            this.createdAt = LocalDateTime.now();
         }
     }
 
@@ -546,6 +551,16 @@ public class MockBackendService {
                 .toList();
     }
 
+    public synchronized List<AdminUserInfo> listAdminUsers() {
+        LocalDateTime now = LocalDateTime.now();
+        return users.values().stream()
+                .map(item -> new AdminUserInfo(item.username, item.role, item.createdAt,
+                        item.bannedUntil != null && item.bannedUntil.isAfter(now) ? item.bannedUntil : null))
+                .sorted(Comparator.comparing(AdminUserInfo::createdAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+    }
+
     public synchronized void banUser(String username, LocalDateTime until) {
         UserEntity user = getRequiredUser(username);
         if (until == null || !until.isAfter(LocalDateTime.now())) {
@@ -558,6 +573,12 @@ public class MockBackendService {
     public synchronized void unbanUser(String username) {
         UserEntity user = getRequiredUser(username);
         user.bannedUntil = null;
+        persistState();
+    }
+
+    public synchronized void grantAdmin(String username) {
+        UserEntity user = getRequiredUser(username);
+        user.role = Role.ADMIN;
         persistState();
     }
 
@@ -982,7 +1003,8 @@ public class MockBackendService {
                 users.values().stream()
                         .map(user -> new UserSnapshot(user.username, user.password, user.role,
                                 user.bannedUntil == null ? null : user.bannedUntil.toString(),
-                                user.avatarImage))
+                                user.avatarImage,
+                                user.createdAt == null ? null : user.createdAt.toString()))
                         .toList(),
                 new ArrayList<>(books.values()),
                 ratingMap,
@@ -1032,6 +1054,7 @@ public class MockBackendService {
         if (state.users() != null) {
             for (UserSnapshot user : state.users()) {
                 UserEntity entity = new UserEntity(user.username(), user.password(), user.role());
+                entity.createdAt = parseDateTime(user.createdAt());
                 entity.bannedUntil = parseDateTime(user.bannedUntil());
                 entity.avatarImage = user.avatarImage();
                 users.put(user.username(), entity);
@@ -1130,7 +1153,8 @@ public class MockBackendService {
                                    Map<String, Set<String>> followingMap, Map<String, List<MessageSnapshot>> messageMap) {
     }
 
-    private record UserSnapshot(String username, String password, Role role, String bannedUntil, String avatarImage) {
+    private record UserSnapshot(String username, String password, Role role, String bannedUntil, String avatarImage,
+                                String createdAt) {
     }
 
     private record CommentSnapshot(long id, String user, String content, String time, Long parentId, int upVotes,

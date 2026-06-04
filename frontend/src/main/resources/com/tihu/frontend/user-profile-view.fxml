@@ -16,6 +16,8 @@
                 <Button text="查看关注" onAction="#onOpenFollowing" styleClass="button-secondary"/>
                 <Button text="查看粉丝" onAction="#onOpenFollowers" styleClass="button-secondary"/>
                 <Button text="打开书单" onAction="#onOpenBookList" styleClass="button-secondary"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="backButton" text="返回用户管理" onAction="#onBack" styleClass="button-secondary"/>
             </HBox>
             <HBox spacing="10" style="-fx-alignment: center-left;">
                 <ImageView fx:id="avatarImageView" fitWidth="64" fitHeight="64" preserveRatio="true"/>

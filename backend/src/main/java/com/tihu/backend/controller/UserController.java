@@ -1,6 +1,8 @@
 package com.tihu.backend.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tihu.backend.common.ApiException;
 import com.tihu.backend.common.PageData;
 import com.tihu.backend.common.Result;
@@ -177,6 +179,26 @@ public class UserController {
     }
 
     /**
+     * 管理员接口：查询全部用户
+     * GET /api/users/admin?page=1&size=1000&sort=created_at_desc
+     */
+    @GetMapping("/admin")
+    public Result getAdminUsers(@RequestParam(defaultValue = "1") int page,
+                                @RequestParam(defaultValue = "1000") int size,
+                                @RequestParam(defaultValue = "created_at_desc") String sort) {
+        StpUtil.checkRole("ADMIN");
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
+            .eq(User::getIsDeleted, 0);
+        if ("created_at_asc".equalsIgnoreCase(sort)) {
+            wrapper.orderByAsc(User::getCreateTime).orderByAsc(User::getId);
+        } else {
+            wrapper.orderByDesc(User::getCreateTime).orderByDesc(User::getId);
+        }
+        Page<User> userPage = userService.page(new Page<>(Math.max(1, page), Math.max(1, size)), wrapper);
+        return Result.success(toAdminUserPage(userPage));
+    }
+
+    /**
      * 管理员接口：获取封禁列表
      * GET /api/users/bans?page=1&size=1000
      */
@@ -207,6 +229,17 @@ public class UserController {
     public Result unbanUserByUsername(@RequestParam String username) {
         StpUtil.checkRole("ADMIN");
         userService.unbanUserByUsername(username);
+        return Result.success();
+    }
+
+    /**
+     * 管理员接口：赋予管理员权限
+     * POST /api/users/grant-admin?username=alice
+     */
+    @PostMapping("/grant-admin")
+    public Result grantAdmin(@RequestParam String username) {
+        StpUtil.checkRole("ADMIN");
+        userService.grantAdminByUsername(username);
         return Result.success();
     }
 
@@ -278,5 +311,30 @@ public class UserController {
         int from = Math.min((safePage - 1) * safeSize, records.size());
         int to = Math.min(from + safeSize, records.size());
         return new PageData<>(records.subList(from, to), total, pages, safePage, safeSize);
+    }
+
+    private PageData<Object> toAdminUserPage(Page<User> userPage) {
+        List<Object> records = userPage.getRecords().stream().map(user -> {
+            Map<String, Object> record = new HashMap<>();
+            record.put("id", user.getId());
+            record.put("userId", user.getId());
+            record.put("username", user.getUsername());
+            record.put("user", user.getUsername());
+            record.put("name", user.getUsername());
+            record.put("role", user.getRole());
+            record.put("userRole", user.getRole());
+            record.put("createdAt", user.getCreateTime());
+            record.put("createTime", user.getCreateTime());
+            record.put("registerTime", user.getCreateTime());
+            record.put("registeredAt", user.getCreateTime());
+            record.put("registrationTime", user.getCreateTime());
+            record.put("bannedUntil", user.getBanExpireTime());
+            record.put("banExpireTime", user.getBanExpireTime());
+            record.put("until", user.getBanExpireTime());
+            record.put("unbanTime", user.getBanExpireTime());
+            record.put("userInfo", user);
+            return record;
+        }).<Object>map(record -> record).toList();
+        return new PageData<>(records, userPage.getTotal(), Math.max(1, userPage.getPages()), userPage.getCurrent(), userPage.getSize());
     }
 }

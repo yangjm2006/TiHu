@@ -295,6 +295,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         this.updateById(user);
     }
 
+    @Override
+    public void grantAdminByUsername(String username) {
+        User user = this.getUserByUsername(username);
+        if (user == null) {
+            throw new ApiException(404, "用户不存在");
+        }
+        user.setRole(Constants.ROLE_ADMIN);
+        this.updateById(user);
+    }
+
     /**
      * 获取用户主页信息（包含评论、书单、关注等）
      */
