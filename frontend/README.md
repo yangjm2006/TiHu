@@ -1,64 +1,70 @@
-# TiHu 图书分享交流平台
+# TiHu 前端客户端
 
-TiHu 是一个 JavaFX 桌面端阅读社区项目，配套 Spring Boot 后端。系统覆盖图书浏览、评分评论、收藏书单、关注粉丝、私信会话和管理员后台管理，前端支持远程 API 优先调用，也保留本地 mock 数据用于离线演示和测试。
-
-## 项目结构
-
-```text
-TiHu/
-├── frontend/                         # JavaFX 客户端
-│   ├── src/main/java/com/tihu/frontend/
-│   │   ├── MainApplication.java       # 程序入口
-│   │   ├── controller/                # 页面控制器
-│   │   ├── request/ApiClient.java     # HTTP 请求封装
-│   │   ├── service/                   # 远程服务与 mock 服务
-│   │   └── utils/                     # 应用状态、主题、日期、图片工具
-│   ├── src/main/resources/com/tihu/frontend/
-│   │   ├── *-view.fxml                # JavaFX 页面
-│   │   ├── app-theme.css              # 日间/夜间主题
-│   │   └── app-icon.png               # 窗口图标
-│   └── docs/frontend-api.md           # 前端实际调用 API 文档
-└── backend/                           # Spring Boot 后端
-    ├── src/main/java/com/tihu/backend/
-    ├── schema.sql                     # 数据库初始化脚本
-    └── README.md
-```
+TiHu 前端是 JavaFX 桌面客户端，配套 Spring Boot 后端使用。系统覆盖图书浏览、评分评论、收藏书单、关注粉丝、私信会话和管理员后台管理；前端优先调用远程 API，也保留本地 Mock 数据用于离线演示和测试。
 
 ## 技术栈
 
 | 层级 | 技术 |
 | --- | --- |
-| 前端 | Java 21, JavaFX 21.0.6, Maven |
-| 后端 | Java 21, Spring Boot, MyBatis-Plus, Sa-Token |
-| 数据 | MySQL, Redis |
+| 运行环境 | Java 21 |
+| UI | JavaFX 21.0.6, FXML, Scene Builder |
+| 构建工具 | Maven Wrapper |
 | 接口 | HTTP REST, JSON |
+| 测试 | JUnit 5, FXML 加载测试, API 合同测试 |
 
-## 快速启动
+## 项目结构
 
-### 1. 启动后端
-
-```powershell
-cd C:\Users\19673\Desktop\TiHu\backend
-mysql -u root -p < schema.sql
-.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+```text
+frontend/
+├── mvnw / mvnw.cmd
+├── pom.xml
+├── docs/frontend-api.md
+├── src/main/java/com/tihu/frontend/
+│   ├── MainApplication.java
+│   ├── controller/
+│   ├── request/ApiClient.java
+│   ├── service/
+│   └── utils/
+├── src/main/resources/com/tihu/frontend/
+│   ├── *-view.fxml
+│   ├── app-theme.css
+│   └── app-icon.png
+└── README.md
 ```
 
-默认后端地址：
+项目可以放在任意目录。以下命令都在 `frontend` 目录中执行，不需要使用固定的本机绝对路径。
+
+## 环境准备
+
+请确认目标电脑已安装：
+
+- JDK 21 或以上
+- 后端服务已启动，或允许前端使用本地 Mock 数据
+
+后端默认地址：
 
 ```text
 http://localhost:9090/api
 ```
 
-数据库账号、Redis 地址等配置请按本机环境修改后端 `application-dev.yaml`。
+## 快速启动
 
-### 2. 启动前端
+如果需要连接真实后端，请先启动 `../backend` 服务。
+
+Windows PowerShell：
 
 ```powershell
-cd C:\Users\19673\Desktop\TiHu\frontend
 .\mvnw.cmd javafx:run
 ```
 
-也可以在 IntelliJ IDEA 中直接运行：
+macOS/Linux：
+
+```bash
+chmod +x mvnw
+./mvnw javafx:run
+```
+
+也可以在 IntelliJ IDEA 中打开 `frontend` 模块并运行：
 
 ```text
 com.tihu.frontend.MainApplication
@@ -72,27 +78,43 @@ com.tihu.frontend.MainApplication
 http://localhost:9090/api
 ```
 
-可通过以下方式覆盖后端地址：
+如果后端不在本机或端口不同，可以覆盖后端地址。
+
+Windows PowerShell：
 
 ```powershell
-$env:TIHU_BACKEND_BASE_URL="http://localhost:9090/api"
+$env:TIHU_BACKEND_BASE_URL="http://服务器地址:9090/api"
 .\mvnw.cmd javafx:run
 ```
 
-或：
+macOS/Linux：
 
-```powershell
-.\mvnw.cmd javafx:run -Dtihu.backend.base-url=http://localhost:9090/api
+```bash
+TIHU_BACKEND_BASE_URL="http://服务器地址:9090/api" ./mvnw javafx:run
 ```
 
-默认模式下，远程接口不可用时部分功能会回退到本地 mock，便于前端离线演示。联调后端时建议开启严格远程模式：
+也可以使用 JVM 参数：
+
+```powershell
+.\mvnw.cmd javafx:run -Dtihu.backend.base-url=http://服务器地址:9090/api
+```
+
+默认模式下，远程接口不可用时部分功能会回退到本地 Mock，便于前端离线演示。联调后端时建议开启严格远程模式。
+
+Windows PowerShell：
 
 ```powershell
 $env:TIHU_REMOTE_STRICT="true"
 .\mvnw.cmd javafx:run
 ```
 
-或：
+macOS/Linux：
+
+```bash
+TIHU_REMOTE_STRICT="true" ./mvnw javafx:run
+```
+
+或使用 JVM 参数：
 
 ```powershell
 .\mvnw.cmd javafx:run -Dtihu.remote.strict=true
@@ -100,7 +122,7 @@ $env:TIHU_REMOTE_STRICT="true"
 
 ## 测试账号
 
-本地 mock 模式可使用：
+本地 Mock 模式可使用：
 
 | 用户名 | 密码 | 角色 | 用途 |
 | --- | --- | --- | --- |
@@ -108,11 +130,13 @@ $env:TIHU_REMOTE_STRICT="true"
 | `alice` | `Alice123` | 普通用户 | 图书浏览、收藏、评论 |
 | `bob` | `Bob12345` | 普通用户 | 关注、主页、私信演示 |
 
-也可以在登录页注册普通用户。管理员注册需要邀请码：
+管理员注册邀请码：
 
 ```text
 123456
 ```
+
+连接真实后端时，请以数据库中的账号为准，也可以通过注册页面新建普通用户。
 
 ## 功能清单
 
@@ -153,32 +177,31 @@ $env:TIHU_REMOTE_STRICT="true"
 
 ## 开发与验证
 
-### 前端测试
+前端测试：
 
 ```powershell
-cd C:\Users\19673\Desktop\TiHu\frontend
 .\mvnw.cmd test
 ```
 
-当前测试覆盖：
+macOS/Linux：
 
-- FXML 加载检查
-- mock 服务持久化和业务行为
-- 图书列表排序分页
-- 远程 API 调用合同
-
-### 后端测试
-
-```powershell
-cd C:\Users\19673\Desktop\TiHu\backend
-.\mvnw.cmd test
+```bash
+./mvnw test
 ```
 
-### 清理重编译
+清理重编译：
 
 ```powershell
 .\mvnw.cmd clean compile
 ```
+
+macOS/Linux：
+
+```bash
+./mvnw clean compile
+```
+
+后端测试请进入 `../backend` 后执行对应模块的 Maven Wrapper。
 
 ## 常见问题
 
@@ -186,7 +209,7 @@ cd C:\Users\19673\Desktop\TiHu\backend
 
 - 确认后端是否在 `http://localhost:9090/api` 运行。
 - 确认账号密码正确。
-- 如果正在联调后端，建议开启 `TIHU_REMOTE_STRICT=true`，避免 mock 回退掩盖接口问题。
+- 如果正在联调后端，建议开启 `TIHU_REMOTE_STRICT=true`，避免 Mock 回退掩盖接口问题。
 
 ### 页面数据和数据库不一致
 
@@ -205,6 +228,5 @@ cd C:\Users\19673\Desktop\TiHu\backend
 
 1. [docs/frontend-api.md](docs/frontend-api.md)
 2. 本 README
-3. 后端 README 或数据库脚本
-
-接口字段以“前端实际调用 API 文档”为最终联调依据。
+3. `../README.md`
+4. `../backend/README.md`
