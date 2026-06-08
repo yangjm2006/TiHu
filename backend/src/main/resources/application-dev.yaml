@@ -2,9 +2,9 @@ spring:
   application:
     name: tihu-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/tihu?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: root
+    url: jdbc:mysql://202.194.14.120:3306/java_3_14?allowPublicKeyRetrieval=true&useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: java_3_14
+    password: JavaP314@
     driver-class-name: com.mysql.cj.jdbc.Driver
   sql:
     init:
@@ -25,7 +25,7 @@ spring:
           min-idle: 0
 
 server:
-  port: 9090
+  port: 22224
   servlet:
     context-path: /
 

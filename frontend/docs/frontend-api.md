@@ -2,7 +2,7 @@
 
 本文档按当前前端代码 `RemoteBackendService` 整理，目的是让后端按前端实际调用路径和字段对齐。
 
-默认基础地址：`http://localhost:9090/api`
+默认基础地址：`http://localhost:22224/api`
 
 最后整理日期：2026-06-04
 

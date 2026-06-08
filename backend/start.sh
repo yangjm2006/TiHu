@@ -44,7 +44,7 @@ read -p "请选择 (1-3): " choice
 
 case $choice in
     1)
-        echo "启动应用... 访问 http://localhost:9090/api"
+        echo "启动应用... 访问 http://localhost:22224/api"
         ./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=dev"
         ;;
     2)
@@ -52,8 +52,8 @@ case $choice in
         ./mvnw clean package -DskipTests
         docker build -t tihu-backend:latest .
         echo "启动容器..."
-        docker run -d -p 9090:9090 --name tihu-backend tihu-backend:latest
-        echo "容器已启动，访问 http://localhost:9090/api"
+        docker run -d -p 22224:22224 --name tihu-backend tihu-backend:latest
+        echo "容器已启动，访问 http://localhost:22224/api"
         ;;
     3)
         echo "打包应用..."
@@ -74,4 +74,3 @@ echo "- 查看日志: docker logs -f tihu-backend"
 echo "- 停止容器: docker stop tihu-backend"
 echo "- 删除容器: docker rm tihu-backend"
 echo ""
-

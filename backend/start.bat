@@ -48,15 +48,15 @@ echo.
 set /p choice=请选择 (1-3):
 
 if "%choice%"=="1" (
-    echo 启动应用... 访问 http://localhost:9090/api
+    echo 启动应用... 访问 http://localhost:22224/api
     call mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=dev"
 ) else if "%choice%"=="2" (
     echo 构建镜像...
     call mvnw clean package -DskipTests
     docker build -t tihu-backend:latest .
     echo 启动容器...
-    docker run -d -p 9090:9090 --name tihu-backend tihu-backend:latest
-    echo 容器已启动，访问 http://localhost:9090/api
+    docker run -d -p 22224:22224 --name tihu-backend tihu-backend:latest
+    echo 容器已启动，访问 http://localhost:22224/api
 ) else if "%choice%"=="3" (
     echo 打包应用...
     call mvnw package -DskipTests
@@ -76,4 +76,3 @@ echo - 停止容器: docker stop tihu-backend
 echo - 删除容器: docker rm tihu-backend
 echo.
 pause
-

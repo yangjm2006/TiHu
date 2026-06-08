@@ -178,7 +178,6 @@ public class ApiClient {
         if (env != null && !env.isBlank()) {
             return env.trim();
         }
-        return "http://localhost:9090/api";
+        return "http://localhost:22224/api";
     }
 }
-
